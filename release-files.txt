@@ -10,8 +10,11 @@ LICENSE
 README.md
 VERSION
 app.py
+deployment/streamlit/app.py
+deployment/streamlit/requirements.txt
 docs/architecture.md
 docs/demo-guide.md
+docs/deployment.md
 docs/learning-guide.md
 docs/release-guide.md
 docs/release-notes-v0.1.0.md
@@ -31,6 +34,7 @@ evaluation/dataset.json
 evaluation/results.json
 evaluation/run_retrieval.py
 evaluation/smoke_retrieval.py
+netlify.toml
 pytest.ini
 release-files.txt
 requirements-dev.txt
@@ -61,3 +65,11 @@ tests/test_quiz_transport.py
 tests/test_release.py
 tests/test_retriever.py
 tests/test_vector_store.py
+web/404.html
+web/build.mjs
+web/build.test.mjs
+web/favicon.svg
+web/index.html
+web/package-lock.json
+web/package.json
+web/styles.css

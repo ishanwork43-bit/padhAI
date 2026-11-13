@@ -1,10 +1,11 @@
 # Changelog
 
-## Hosting setup — 2026-11-13
+## Unreleased hosting additions — 2026-11-13
 
 - Published the source and v0.1.0 tag to GitHub at the owner's requested public visibility.
 - Added a Community Cloud entry point with CPU PyTorch deployment requirements.
 - Added a Netlify landing page, public samples, deployment guide, and 17 build tests.
+- Published the landing page at https://padhai-ishan.netlify.app.
 - The landing page shows an explicit pending state until a real Streamlit app URL is set.
 - GitHub Actions passed on Python 3.11 and 3.12 for the original release and cloud entry point.
 

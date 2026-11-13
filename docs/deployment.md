@@ -88,7 +88,21 @@ Use the hosting providers' access controls if you need a restricted demo.
 
 ## Deployment status
 
-The source and v0.1.0 tag have been pushed to the public GitHub repository at the
-owner's request. Hosting URLs must be recorded only after their deployments have
-completed and have been checked. No live Streamlit or Netlify URL is claimed by
-this guide.
+- GitHub: [public source](https://github.com/ishanwork43-bit/padhAI) and
+  [v0.1.0 release](https://github.com/ishanwork43-bit/padhAI/releases/tag/v0.1.0).
+- Netlify: **[padhai-ishan.netlify.app](https://padhai-ishan.netlify.app)**.
+  Deployment `6af71eff71b56bbae4b4b6de` reached `ready` on 2026-11-13. Live HTTP
+  checks matched the generated assets, and desktop/mobile browser checks passed.
+- Streamlit: **pending**. No working application URL has been supplied or verified.
+  The Netlify page explicitly keeps the launch link unavailable until then.
+
+The Netlify deployment was a manual CLI upload. Automatic GitHub-to-Netlify
+builds are not connected; import/link this repository in Netlify to enable them.
+The existing `netlify.toml` and `APP_URL` setting support that workflow.
+GitHub Actions currently tests the Python app and landing-page build.
+
+The v0.1.0 GitHub release offers GitHub's automatically generated source archives.
+The separately built ZIP/checksum could not be attached because the release-upload
+host rejected the connected credential. The checksum for that separate ZIP must
+not be used to validate GitHub's generated archives. Hosting additions are on
+`main`, after the v0.1.0 tag.

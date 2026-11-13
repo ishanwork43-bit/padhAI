@@ -281,3 +281,27 @@ Run the evaluation, inspect one failure, and propose a small change you can test
    for secrets; and why ZIP/checksum replacements are individually atomic, not one
    transaction. Fixed ZIP metadata gives identical bytes for identical input with
    the same Python/zlib versions.
+
+
+## Community Cloud entry point (`deployment/streamlit/app.py`)
+
+1. **Purpose:** keep a Linux CPU dependency file beside the hosted entry point while
+   reusing the existing application.
+2. **Inputs and output:** Community Cloud executes this file; it renders the same
+   Streamlit interface as the root `app.py`.
+3. **Python concepts:** `pathlib` resolves the repository root, `sys.path` makes
+   project imports available, and `runpy.run_path` executes the original script.
+4. **Connections:** its adjacent `requirements.txt` pins the tested CPU PyTorch
+   wheel and includes the root application requirements. The Netlify page links
+   to the resulting app URL, rather than running Python itself.
+5. **Failures and checks:** a wrong deployment path or unsupported Python version
+   prevents startup. Streamlit AppTest successfully rendered this entry point
+   locally; hosting still needs a real deployment and smoke check.
+6. **Try it:** run `streamlit run deployment/streamlit/app.py` from the repository
+   root and navigate the same four pages. Compare it with `streamlit run app.py`.
+
+The separate `web/build.mjs` uses Node's standard library to validate the public
+Streamlit URL, render a linked or pending launch state, and copy an explicit set
+of public assets into `web/dist`. `npm test` in `web` checks that bad URLs cannot
+create unsafe launch links or overwrite the prior build. No JavaScript executes
+in the landing page itself; its FAQ uses native HTML `details` elements.

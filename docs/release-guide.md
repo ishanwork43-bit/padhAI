@@ -2,7 +2,14 @@
 
 Version **0.1.0** is the proposed first portfolio release. This guide separates
 local preparation from the commands you may later choose to run against GitHub.
-No repository, commit, tag, push, or GitHub release has been created on your behalf.
+The initial source and tag have since been published at the owner's request:
+[GitHub release v0.1.0](https://github.com/ishanwork43-bit/padhAI/releases/tag/v0.1.0).
+The commands below illustrate the original release workflow; do not recreate or
+move that published tag. Use a new reviewed version/tag for a future release.
+The existing v0.1.0 ZIP was built from the v0.1.0 source snapshot. Current `main`
+also includes later hosting additions; building `main` produces a development
+snapshot with different bytes, even while the Python MVP version remains 0.1.0.
+Check out the release tag in a separate clone when reproducing its exact archive.
 
 The source version is in [VERSION](../VERSION), changes are in
 [CHANGELOG.md](../CHANGELOG.md), and the prepared release description is

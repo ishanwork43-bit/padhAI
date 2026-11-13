@@ -32,8 +32,8 @@ that all defects have been found.
 
 The full suite includes 57 release-builder tests for allowlisting, secret/cache
 exclusion, version validation, traversal/symlink handling, reproducible ZIP bytes,
-checksums, missing files, and failed output writes. The source manifest lists 61
-reviewed project files. The archive checksum, ZIP contents, extracted application
+checksums, missing files, and failed output writes. The original v0.1.0 source manifest lists 61
+reviewed project files; the current main-branch manifest adds the hosting files. The archive checksum, ZIP contents, extracted application
 startup/navigation, and an identical second build were checked locally.
 
 The original release preparation was local. Subsequently, the source and
@@ -107,3 +107,13 @@ allowlisted output, and preservation of a prior build after invalid input.
 Playwright checked desktop and 390/320-pixel widths, internal navigation, FAQ
 expansion, sample downloads, and absence of a broken app launch link. Hosted
 Python behavior is not established by these static-page checks.
+
+
+The Netlify production deployment reached `ready` at
+https://padhai-ishan.netlify.app. Live checks confirmed HTTP 200 and matching
+build bytes for the page, stylesheet, and sample downloads; an unknown path
+returned the custom 404. Its deployed response includes the configured headers.
+Live browser checks passed at 1440, 390, and 320 pixels, including FAQ expansion
+and the explicit pending app-launch state. CI also passed all three jobs on
+commit `3d468a5` (Python 3.11/3.12 and the 17-test Node landing build).
+The Streamlit hosted app itself remains unverified and unlinked.
