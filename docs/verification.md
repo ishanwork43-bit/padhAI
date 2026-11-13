@@ -36,8 +36,10 @@ checksums, missing files, and failed output writes. The source manifest lists 61
 reviewed project files. The archive checksum, ZIP contents, extracted application
 startup/navigation, and an identical second build were checked locally.
 
-No GitHub repository, commit, tag, push, or published release was created. Follow
-[the release guide](release-guide.md) when ready. Archive bytes are reproducible
+The original release preparation was local. Subsequently, the source and
+`v0.1.0` tag were pushed to the public GitHub repository at the owner's request.
+GitHub Actions passed for both Python 3.11 and 3.12 on commit `d42b40b` and the
+Community Cloud entry-point commit `d8bb2b0`. See [deployment](deployment.md). Archive bytes are reproducible
 for identical source bytes with the same Python/zlib versions; the checksum is
 an integrity check rather than a signed publisher identity.
 
@@ -90,6 +92,18 @@ support, uniquely correct quiz choices, appropriate difficulty, or prompt-inject
 immunity.
 
 macOS setup instructions were written but not executed on a Mac. GitHub Actions
-is configured for Python 3.11/3.12 but has not run on GitHub here. The application
+passed on Python 3.11/3.12 for the commits recorded above. The application
 has no production-security claim, authenticated accounts, durable notes storage,
 or hard resource sandbox for native PDF parsing.
+
+
+## Hosting preparation checks
+
+The Community Cloud entry point rendered successfully with Streamlit AppTest.
+Its CPU requirements resolved against the existing tested environment; a fresh
+Community Cloud installation still needs to be checked after deployment.
+The landing page passed 17 Node tests for URL validation, pending/linked states,
+allowlisted output, and preservation of a prior build after invalid input.
+Playwright checked desktop and 390/320-pixel widths, internal navigation, FAQ
+expansion, sample downloads, and absence of a broken app launch link. Hosted
+Python behavior is not established by these static-page checks.

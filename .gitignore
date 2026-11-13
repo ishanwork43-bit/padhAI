@@ -17,3 +17,5 @@ chroma/
 
 # Generated release artifacts
 dist/
+node_modules/
+.netlify/

@@ -2,7 +2,7 @@
 
 **Padhai ka smarter way.** Upload your notes, find relevant passages, and test what you know.
 
-**Release candidate: 0.1.0.** A Python study companion built with Streamlit,
+**Version: 0.1.0.** A Python study companion built with Streamlit,
 PyMuPDF, Sentence Transformers, and Chroma. Search runs locally after the first
 embedding-model download. OpenAI answers and quizzes are optional and run only
 when you explicitly request them.
@@ -19,6 +19,14 @@ when you explicitly request them.
 Notes and vector indexes are isolated by session and held in memory. Refreshing
 or disconnecting can lose access to them. Local retrieval returns passages; it
 is **not full local AI answer generation**. Quizzes require an OpenAI API key.
+
+## Hosted deployment
+
+Source: [ishanwork43-bit/padhAI](https://github.com/ishanwork43-bit/padhAI).
+The [Netlify landing page](https://padhai-ishan.netlify.app) introduces the project
+and provides public sample notes. The full Python app runs separately on Streamlit
+Community Cloud; its launch link stays unavailable until that app is deployed.
+Follow the [deployment guide](docs/deployment.md) for the exact settings.
 
 ## Run locally on your Mac
 
@@ -172,8 +180,8 @@ a presentation fallback and the architecture for future improvements.
 
 Version: [VERSION](VERSION). Changes: [CHANGELOG](CHANGELOG.md).
 Follow the [release guide](docs/release-guide.md) to prepare your own repository,
-review files, run checks, tag `v0.1.0`, and publish when ready. This preparation
-has not created a GitHub repository or published a release.
+review files, run checks, tag `v0.1.0`, and publish when ready. The source and `v0.1.0` tag are on GitHub. The original v0.1.0 ZIP contains the
+Python MVP; the later hosting files are available on the `main` branch.
 
 ```bash
 python scripts/build_release.py --output-dir dist

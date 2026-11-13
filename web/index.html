@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="PadhAI turns your study notes into a searchable workspace, with source passages and optional AI answers and quizzes. Padhai ka smarter way.">
+  <meta name="theme-color" content="#4f46e5">
+  <title>PadhAI — Padhai ka smarter way.</title>
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <a class="skip" href="#main">Skip to content</a>
+  <header class="nav wrap">
+    <a class="brand" href="/" aria-label="PadhAI home"><img src="/favicon.svg" alt="" width="36" height="36">Padh<span>AI</span></a>
+    <nav aria-label="Main navigation"><a href="#how-it-works">How it works</a><a href="#sample-notes">Try the notes</a><a href="#questions">Questions</a></nav>
+    <a class="nav-source" href="https://github.com/ishanwork43-bit/padhAI" target="_blank" rel="noopener noreferrer">View project <span aria-hidden="true">→</span></a>
+  </header>
+  <main id="main">
+    <section class="hero wrap">
+      <div class="hero-copy">
+        <p class="eyebrow"><span class="dot" aria-hidden="true"></span> YOUR NOTES. A LITTLE MORE CLARITY.</p>
+        <h1>Less re-reading.<br>More <em>understanding.</em></h1>
+        <p class="tagline">Padhai ka smarter way.</p>
+        <p class="intro">Bring your notes. Find the passage you need. Then put your understanding to the test—all in one study space.</p>
+        <div class="actions">{{APP_CTA}}<a class="button secondary" href="#how-it-works">Take a quick look <span aria-hidden="true">↓</span></a></div>
+        <p class="launch-status">{{APP_STATUS}}</p>
+        <div class="file-types" aria-label="Supported formats"><span>PDF</span><span>TXT</span><span>Markdown</span><span class="file-note">Your own study materials</span></div>
+      </div>
+      <div class="study-scene" aria-label="Illustration of a study session, not a live AI response">
+        <div class="scene-top"><span class="scene-dot"></span> A LITTLE STRUCTURE GOES A LONG WAY</div>
+        <div class="notebook">
+          <div class="notebook-top"><span class="notebook-icon" aria-hidden="true">→</span><span>Today's study session<br><small>One topic at a time.</small></span><span class="date-label">01</span></div>
+          <div class="notebook-line"><span class="step-chip">1</span><div><strong>Start with your notes</strong><p>Lecture PDFs, chapter summaries, revision sheets.</p></div><span class="check" aria-hidden="true">✓</span></div>
+          <div class="question-note"><span class="mini-label">A QUESTION WORTH ASKING</span><p>“What reduces redundancy in relational tables?”</p><span class="source-pill">Find the passage. Check the source.</span></div>
+          <div class="notebook-line last-line"><span class="step-chip purple">2</span><div><strong>Make it stick</strong><p>Practice. Review. Try again.</p></div></div>
+        </div>
+        <div class="sticky"><span aria-hidden="true">✦</span> Understand it.<br>Don't just highlight it.</div>
+        <p class="scene-caption">From scattered notes to a focused session.</p>
+      </div>
+    </section>
+
+    <div class="promise-strip"><div class="wrap promise-inner"><span><b>01</b> Work from your notes</span><span><b>02</b> Keep the source in sight</span><span><b>03</b> Practice at your pace</span></div></div>
+
+    <section class="section wrap" id="how-it-works">
+      <div class="section-heading"><div><p class="eyebrow">A SMALLER GAP BETWEEN READING AND KNOWING</p><h2>A study rhythm that makes sense.</h2></div><p>Keep the material you trust.<br>Add a clearer way to work through it.</p></div>
+      <div class="steps">
+        <article class="feature"><span class="feature-number">01 / GATHER</span><div class="feature-icon" aria-hidden="true">↑</div><h3>Give your notes a home.</h3><p>Upload PDF, text, or Markdown. Preview the extracted text and see which pages you're working with.</p><span class="feature-footer">Start in My Notes</span></article>
+        <article class="feature"><span class="feature-number">02 / CONNECT</span><div class="feature-icon lavender" aria-hidden="true">⌕</div><h3>Ask a better question.</h3><p>Find relevant passages with semantic search. Check the filename and page, then request an optional AI answer with evidence.</p><span class="feature-footer">Explore Ask PadhAI</span></article>
+        <article class="feature"><span class="feature-number">03 / REMEMBER</span><div class="feature-icon peach" aria-hidden="true">✓</div><h3>See what stays with you.</h3><p>With AI enabled, generate 5, 10, or 20 questions. Review explanations and retake the same quiz without generating it again.</p><span class="feature-footer">Practice in Quiz Mode</span></article>
+      </div>
+      <p class="section-note">Search works without an OpenAI key. AI answers and quizzes require one to be configured in the study app.</p>
+    </section>
+
+    <section class="sample-section" id="sample-notes"><div class="wrap sample-layout">
+      <div><p class="eyebrow">NO PERFECT NOTES REQUIRED</p><h2>Start with something small.</h2><p>Download a sample, upload it in <strong>My Notes</strong>, and build your search index in <strong>Ask PadhAI</strong>. Then ask a question about the material.</p><p class="sample-question">Try: “Who manages the operating system in IaaS?”</p></div>
+      <div class="downloads">
+        <a class="download" href="/samples/dbms_notes.pdf" download><span class="doc-icon">PDF</span><span><strong>Database fundamentals</strong><small>Normalization and transactions · 2 pages</small></span><span class="download-arrow" aria-hidden="true">↓</span></a>
+        <a class="download" href="/samples/cloud_computing.txt" download><span class="doc-icon txt">TXT</span><span><strong>Cloud computing</strong><small>IaaS, PaaS, and SaaS · text notes</small></span><span class="download-arrow" aria-hidden="true">↓</span></a>
+        <a class="text-link" href="/samples/dbms_notes.md" download>Prefer Markdown? Download the DBMS notes <span aria-hidden="true">→</span></a>
+      </div>
+    </div></section>
+
+    <section class="section wrap faq-layout" id="questions">
+      <div><p class="eyebrow">BEFORE YOU BEGIN</p><h2>A few things<br>to know.</h2><p>Useful tools work better<br>with clear expectations.</p></div>
+      <div class="faq">
+        <details><summary>Do I need an API key?</summary><p>Uploading, previewing, and searching notes work without an OpenAI key. AI answers and quizzes are available when the app owner configures one. Those actions can incur provider charges and run only when you explicitly request them.</p></details>
+        <details><summary>Where do my notes go?</summary><p>The hosted app processes uploads on its Streamlit server and holds notes and indexes in session memory. They are not saved as project files. Refreshing, disconnecting, or a server restart may lose the session. When you request AI generation, selected excerpts are sent to OpenAI. This landing page does not collect uploads.</p></details>
+        <details><summary>Can I rely on every answer?</summary><p>Check the source passages. The app validates source IDs and exact evidence quotes, but a matching quote does not prove that an answer or quiz question is correct. Treat PadhAI as a study aid and verify important details in your original material.</p></details>
+        <details><summary>What if my PDF is scanned or the app is slow?</summary><p>Scanned PDFs need OCR before upload. The first search index downloads and loads the embedding model, which can take a little longer. Hosted instances may also sleep between visits. Start with a small document and follow any error message shown in the app.</p></details>
+      </div>
+    </section>
+    <section class="closing wrap"><div><p class="eyebrow">ONE GOOD SESSION IS A GOOD START</p><h2>Make room for the “aha.”</h2></div><div>{{APP_CTA}}<p class="closing-note">Your material. Your pace.</p></div></section>
+  </main>
+  <footer class="wrap"><a class="brand" href="/"><img src="/favicon.svg" alt="" width="28" height="28">Padh<span>AI</span></a><p>Padhai ka smarter way.</p><a href="https://github.com/ishanwork43-bit/padhAI" target="_blank" rel="noopener noreferrer">Explore the project →</a></footer>
+</body>
+</html>
