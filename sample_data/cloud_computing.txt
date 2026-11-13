@@ -1,0 +1,11 @@
+Cloud computing study notes
+
+IaaS (Infrastructure as a Service) supplies virtual machines, storage, and networking.
+The customer manages the operating system and applications.
+
+PaaS (Platform as a Service) supplies a managed runtime and development platform.
+The customer deploys application code while the provider manages infrastructure.
+
+SaaS (Software as a Service) supplies a complete application accessed over a network.
+
+These short sample notes are provided for document processing experiments.

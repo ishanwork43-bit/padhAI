@@ -1,0 +1,18 @@
+# Changelog
+
+## 0.1.0 — prepared 2026-11-13
+
+Initial portfolio MVP, prepared locally for a first GitHub release.
+
+- PDF, TXT, and Markdown extraction with page-aware overlapping chunks and input limits.
+- Local Sentence Transformers embeddings and session-isolated Chroma search.
+- Optional OpenAI answers with validated source IDs and exact evidence quotes.
+- MCQ quizzes with 5/10/20 questions, difficulty, explanations, scoring, and retakes.
+- Failure handling for malformed documents, model/API errors, invalid generated
+  output, stale indexes, and changed quiz settings.
+- Automated tests, a fixed retrieval dataset, measured results, and GitHub Actions.
+- Mac setup instructions, module learning notes, a demo guide, and release tooling.
+
+Live OpenAI generation and macOS installation remain unverified. Retrieval
+measurements come from a small hand-authored dataset. No GitHub release has been
+published as part of this preparation.

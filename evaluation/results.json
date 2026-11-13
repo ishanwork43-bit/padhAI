@@ -1,0 +1,575 @@
+{
+  "schema_version": 1,
+  "generated_at_utc": "2026-11-12T17:02:32.655237+00:00",
+  "dataset_sha256": "2380e50ca16136ce09a682dabce851d3c64073e1b9f4bdcfaa72917c9f4228a1",
+  "dataset_description": "Small hand-authored learning dataset. Fixed before measuring; not a held-out estimate of general retrieval quality. Relevance is labeled at document level.",
+  "dataset_counts": {
+    "documents": 8,
+    "chunks": 8,
+    "questions": 20
+  },
+  "runtime": {
+    "python": "3.12.14",
+    "platform": "Linux-6.18.57-x86_64-with-glibc2.41",
+    "packages": {
+      "sentence-transformers": "5.7.0",
+      "transformers": "5.22.2",
+      "torch": "2.15.0+cpu",
+      "chromadb": "1.5.9",
+      "PyMuPDF": "1.28.2",
+      "numpy": "2.5.4"
+    }
+  },
+  "embedding": {
+    "model_id": "sentence-transformers/all-MiniLM-L6-v2@c9745ed1d9f207416be6d2e6f8de32d1f16199bf:weighted-windows-v1",
+    "model_name": "sentence-transformers/all-MiniLM-L6-v2",
+    "revision": "c9745ed1d9f207416be6d2e6f8de32d1f16199bf",
+    "device": "cpu",
+    "real_model_run": true,
+    "aggregation": "token-weighted normalized window average"
+  },
+  "retrieval": {
+    "chunk_size_characters": 1000,
+    "chunk_overlap_characters": 150,
+    "candidate_chunk_limit": 20,
+    "min_cosine_similarity": 0.25,
+    "metric_document_cutoffs": [
+      1,
+      3,
+      5
+    ],
+    "ranking_rule": "Retrieve up to 20 chunks at threshold 0.25, then keep the first chunk per document ID in returned order. K counts unique documents.",
+    "all_corpus_chunks_fit_candidate_limit": true,
+    "ties": "Use application order: descending similarity then chunk ID among Chroma candidates.",
+    "unanswerable_rule": "Any returned document above threshold is a false positive on an unanswerable question."
+  },
+  "metrics": {
+    "answerable_questions": 18,
+    "unanswerable_questions": 2,
+    "hit_at_k": {
+      "1": 1.0,
+      "3": 1.0,
+      "5": 1.0
+    },
+    "macro_recall_at_k": {
+      "1": 0.9444444444444444,
+      "3": 1.0,
+      "5": 1.0
+    },
+    "unanswerable_false_positive_count": 0,
+    "unanswerable_false_positive_rate": 0.0
+  },
+  "queries": [
+    {
+      "id": "norm_redundancy",
+      "question": "How should a relational design avoid storing the same student address in many enrollment rows?",
+      "relevant_documents": [
+        "dbms_normalization.md"
+      ],
+      "language": "en",
+      "retrieved_chunk_count": 1,
+      "retrieved_documents": [
+        {
+          "filename": "dbms_normalization.md",
+          "document_id": "dcbd21acabd2a1e1a12a46f7d7013aa5ff5f4671d7e7d8255fe68b19c48d6a39",
+          "similarity": 0.4076284170150757,
+          "chunk_id": "676c339aa65771900fd0efb472ffee064e26754fbbd152bbb730731e7c5d9c9b",
+          "page_number": null
+        }
+      ],
+      "relevant_found_at_k": {
+        "1": 1,
+        "3": 1,
+        "5": 1
+      }
+    },
+    {
+      "id": "norm_hinglish",
+      "question": "Composite key ki partial dependency kaunsi normal form remove karti hai?",
+      "relevant_documents": [
+        "dbms_normalization.md"
+      ],
+      "language": "hinglish",
+      "retrieved_chunk_count": 1,
+      "retrieved_documents": [
+        {
+          "filename": "dbms_normalization.md",
+          "document_id": "dcbd21acabd2a1e1a12a46f7d7013aa5ff5f4671d7e7d8255fe68b19c48d6a39",
+          "similarity": 0.36412501335144043,
+          "chunk_id": "676c339aa65771900fd0efb472ffee064e26754fbbd152bbb730731e7c5d9c9b",
+          "page_number": null
+        }
+      ],
+      "relevant_found_at_k": {
+        "1": 1,
+        "3": 1,
+        "5": 1
+      }
+    },
+    {
+      "id": "transaction_atomicity",
+      "question": "Why must both sides of a bank transfer succeed together or both be undone?",
+      "relevant_documents": [
+        "dbms_transactions.md"
+      ],
+      "language": "en",
+      "retrieved_chunk_count": 1,
+      "retrieved_documents": [
+        {
+          "filename": "dbms_transactions.md",
+          "document_id": "733064e56ce3af05c88948b6f6a00575b9da883aad6f2c8147809d0d8fb06c20",
+          "similarity": 0.4195026755332947,
+          "chunk_id": "8332d5812df7046810bf1713657704cbb6e844cb9882f217f497022bf8dda51b",
+          "page_number": null
+        }
+      ],
+      "relevant_found_at_k": {
+        "1": 1,
+        "3": 1,
+        "5": 1
+      }
+    },
+    {
+      "id": "transaction_isolation",
+      "question": "Which transaction property controls interference when two database operations run concurrently?",
+      "relevant_documents": [
+        "dbms_transactions.md"
+      ],
+      "language": "en",
+      "retrieved_chunk_count": 2,
+      "retrieved_documents": [
+        {
+          "filename": "dbms_transactions.md",
+          "document_id": "733064e56ce3af05c88948b6f6a00575b9da883aad6f2c8147809d0d8fb06c20",
+          "similarity": 0.5644611120223999,
+          "chunk_id": "8332d5812df7046810bf1713657704cbb6e844cb9882f217f497022bf8dda51b",
+          "page_number": null
+        },
+        {
+          "filename": "dbms_normalization.md",
+          "document_id": "dcbd21acabd2a1e1a12a46f7d7013aa5ff5f4671d7e7d8255fe68b19c48d6a39",
+          "similarity": 0.2555807828903198,
+          "chunk_id": "676c339aa65771900fd0efb472ffee064e26754fbbd152bbb730731e7c5d9c9b",
+          "page_number": null
+        }
+      ],
+      "relevant_found_at_k": {
+        "1": 1,
+        "3": 1,
+        "5": 1
+      }
+    },
+    {
+      "id": "cloud_iaas",
+      "question": "When I rent a virtual machine, who maintains its guest operating system?",
+      "relevant_documents": [
+        "cloud_services.md"
+      ],
+      "language": "en",
+      "retrieved_chunk_count": 2,
+      "retrieved_documents": [
+        {
+          "filename": "cloud_services.md",
+          "document_id": "73e6756c6a2c222a5aec180ac1d3d0d570c6c2b51d9c73aa16b3f72c6dda7ddc",
+          "similarity": 0.3537989854812622,
+          "chunk_id": "bb0baddf3c9ca349274d8295ca877582ea0db75d00b00039c11218e9f22eb79a",
+          "page_number": null
+        },
+        {
+          "filename": "os_memory.md",
+          "document_id": "800457969af4689a6121fe9d625c06987583c0341ac18f6f2ac5ce61dda3dde6",
+          "similarity": 0.3066306710243225,
+          "chunk_id": "491af99f4f4a2905cd4a747d2f5b2fdc37975023d4f6643407640a65d504e63a",
+          "page_number": null
+        }
+      ],
+      "relevant_found_at_k": {
+        "1": 1,
+        "3": 1,
+        "5": 1
+      }
+    },
+    {
+      "id": "cloud_paas",
+      "question": "Which cloud model lets me deploy application code without managing the operating system?",
+      "relevant_documents": [
+        "cloud_services.md"
+      ],
+      "language": "en",
+      "retrieved_chunk_count": 1,
+      "retrieved_documents": [
+        {
+          "filename": "cloud_services.md",
+          "document_id": "73e6756c6a2c222a5aec180ac1d3d0d570c6c2b51d9c73aa16b3f72c6dda7ddc",
+          "similarity": 0.5609679222106934,
+          "chunk_id": "bb0baddf3c9ca349274d8295ca877582ea0db75d00b00039c11218e9f22eb79a",
+          "page_number": null
+        }
+      ],
+      "relevant_found_at_k": {
+        "1": 1,
+        "3": 1,
+        "5": 1
+      }
+    },
+    {
+      "id": "network_transport",
+      "question": "Which transport trades delivery and ordering guarantees for independent low-latency datagrams?",
+      "relevant_documents": [
+        "network_protocols.md"
+      ],
+      "language": "en",
+      "retrieved_chunk_count": 2,
+      "retrieved_documents": [
+        {
+          "filename": "network_protocols.md",
+          "document_id": "ae82be1ce5cf6dbea6caf6ec8b2d5afff84b98ba416098e7b87eceeb3ac9cee9",
+          "similarity": 0.4244460463523865,
+          "chunk_id": "92fca12fde253d63641607e08571e2cbaa9b1d58ca432b79a7736c5c8cfc887e",
+          "page_number": null
+        },
+        {
+          "filename": "dbms_transactions.md",
+          "document_id": "733064e56ce3af05c88948b6f6a00575b9da883aad6f2c8147809d0d8fb06c20",
+          "similarity": 0.2537209391593933,
+          "chunk_id": "8332d5812df7046810bf1713657704cbb6e844cb9882f217f497022bf8dda51b",
+          "page_number": null
+        }
+      ],
+      "relevant_found_at_k": {
+        "1": 1,
+        "3": 1,
+        "5": 1
+      }
+    },
+    {
+      "id": "network_dns",
+      "question": "What turns a website name into an address a client can contact?",
+      "relevant_documents": [
+        "network_protocols.md"
+      ],
+      "language": "en",
+      "retrieved_chunk_count": 1,
+      "retrieved_documents": [
+        {
+          "filename": "network_protocols.md",
+          "document_id": "ae82be1ce5cf6dbea6caf6ec8b2d5afff84b98ba416098e7b87eceeb3ac9cee9",
+          "similarity": 0.37930774688720703,
+          "chunk_id": "92fca12fde253d63641607e08571e2cbaa9b1d58ca432b79a7736c5c8cfc887e",
+          "page_number": null
+        }
+      ],
+      "relevant_found_at_k": {
+        "1": 1,
+        "3": 1,
+        "5": 1
+      }
+    },
+    {
+      "id": "memory_address_space",
+      "question": "How can separate processes have their own logical addresses while sharing physical RAM?",
+      "relevant_documents": [
+        "os_memory.md"
+      ],
+      "language": "en",
+      "retrieved_chunk_count": 2,
+      "retrieved_documents": [
+        {
+          "filename": "os_memory.md",
+          "document_id": "800457969af4689a6121fe9d625c06987583c0341ac18f6f2ac5ce61dda3dde6",
+          "similarity": 0.6421688795089722,
+          "chunk_id": "491af99f4f4a2905cd4a747d2f5b2fdc37975023d4f6643407640a65d504e63a",
+          "page_number": null
+        },
+        {
+          "filename": "dbms_transactions.md",
+          "document_id": "733064e56ce3af05c88948b6f6a00575b9da883aad6f2c8147809d0d8fb06c20",
+          "similarity": 0.32168304920196533,
+          "chunk_id": "8332d5812df7046810bf1713657704cbb6e844cb9882f217f497022bf8dda51b",
+          "page_number": null
+        }
+      ],
+      "relevant_found_at_k": {
+        "1": 1,
+        "3": 1,
+        "5": 1
+      }
+    },
+    {
+      "id": "memory_page_fault",
+      "question": "What happens when a program requests a page that is not currently in physical memory?",
+      "relevant_documents": [
+        "os_memory.md"
+      ],
+      "language": "en",
+      "retrieved_chunk_count": 1,
+      "retrieved_documents": [
+        {
+          "filename": "os_memory.md",
+          "document_id": "800457969af4689a6121fe9d625c06987583c0341ac18f6f2ac5ce61dda3dde6",
+          "similarity": 0.6630219221115112,
+          "chunk_id": "491af99f4f4a2905cd4a747d2f5b2fdc37975023d4f6643407640a65d504e63a",
+          "page_number": null
+        }
+      ],
+      "relevant_found_at_k": {
+        "1": 1,
+        "3": 1,
+        "5": 1
+      }
+    },
+    {
+      "id": "search_binary",
+      "question": "What condition must an array satisfy before repeatedly halving its search interval is reliable?",
+      "relevant_documents": [
+        "algorithms_search.md"
+      ],
+      "language": "en",
+      "retrieved_chunk_count": 1,
+      "retrieved_documents": [
+        {
+          "filename": "algorithms_search.md",
+          "document_id": "a436b195541ca20b5d7deb83739b1960e346fec29b4e038becb771b1abd5148a",
+          "similarity": 0.5444785356521606,
+          "chunk_id": "980b2188ed788807ceb09c657cb349a4cb0bf2207d10d62468301ee600eaaeed",
+          "page_number": null
+        }
+      ],
+      "relevant_found_at_k": {
+        "1": 1,
+        "3": 1,
+        "5": 1
+      }
+    },
+    {
+      "id": "search_unsorted",
+      "question": "How can I look for a value in a small unsorted sequence without sorting it first?",
+      "relevant_documents": [
+        "algorithms_search.md"
+      ],
+      "language": "en",
+      "retrieved_chunk_count": 1,
+      "retrieved_documents": [
+        {
+          "filename": "algorithms_search.md",
+          "document_id": "a436b195541ca20b5d7deb83739b1960e346fec29b4e038becb771b1abd5148a",
+          "similarity": 0.5877354145050049,
+          "chunk_id": "980b2188ed788807ceb09c657cb349a4cb0bf2207d10d62468301ee600eaaeed",
+          "page_number": null
+        }
+      ],
+      "relevant_found_at_k": {
+        "1": 1,
+        "3": 1,
+        "5": 1
+      }
+    },
+    {
+      "id": "ml_overfit",
+      "question": "What problem is suggested by excellent training performance but poor validation performance?",
+      "relevant_documents": [
+        "ml_overfitting.md"
+      ],
+      "language": "en",
+      "retrieved_chunk_count": 2,
+      "retrieved_documents": [
+        {
+          "filename": "ml_overfitting.md",
+          "document_id": "d9135e63cf64cc39a94a7f7e035ae710bf535dfa04fe6f99c1f5bf473d38ff0b",
+          "similarity": 0.5576121211051941,
+          "chunk_id": "cc60d48f7e25d79911de93f9738f2047c351cd5639ddc9a2b854c59fcde92b11",
+          "page_number": null
+        },
+        {
+          "filename": "ml_data_splits.md",
+          "document_id": "a7ced81afde84046ba327df8b593be9625cede017009664d2e9be75158f7fc39",
+          "similarity": 0.2954840660095215,
+          "chunk_id": "63b6dbef26fcd137312977c3b6af8d9cbc787fdb5ae662433870b65d20f22391",
+          "page_number": null
+        }
+      ],
+      "relevant_found_at_k": {
+        "1": 1,
+        "3": 1,
+        "5": 1
+      }
+    },
+    {
+      "id": "ml_regularization",
+      "question": "How do weight penalties and stopping training early help a model generalize?",
+      "relevant_documents": [
+        "ml_overfitting.md"
+      ],
+      "language": "en",
+      "retrieved_chunk_count": 2,
+      "retrieved_documents": [
+        {
+          "filename": "ml_overfitting.md",
+          "document_id": "d9135e63cf64cc39a94a7f7e035ae710bf535dfa04fe6f99c1f5bf473d38ff0b",
+          "similarity": 0.4691615104675293,
+          "chunk_id": "cc60d48f7e25d79911de93f9738f2047c351cd5639ddc9a2b854c59fcde92b11",
+          "page_number": null
+        },
+        {
+          "filename": "ml_data_splits.md",
+          "document_id": "a7ced81afde84046ba327df8b593be9625cede017009664d2e9be75158f7fc39",
+          "similarity": 0.36476999521255493,
+          "chunk_id": "63b6dbef26fcd137312977c3b6af8d9cbc787fdb5ae662433870b65d20f22391",
+          "page_number": null
+        }
+      ],
+      "relevant_found_at_k": {
+        "1": 1,
+        "3": 1,
+        "5": 1
+      }
+    },
+    {
+      "id": "ml_test_split",
+      "question": "Which dataset should be reserved for the final assessment instead of repeated model selection?",
+      "relevant_documents": [
+        "ml_data_splits.md"
+      ],
+      "language": "en",
+      "retrieved_chunk_count": 1,
+      "retrieved_documents": [
+        {
+          "filename": "ml_data_splits.md",
+          "document_id": "a7ced81afde84046ba327df8b593be9625cede017009664d2e9be75158f7fc39",
+          "similarity": 0.3996162414550781,
+          "chunk_id": "63b6dbef26fcd137312977c3b6af8d9cbc787fdb5ae662433870b65d20f22391",
+          "page_number": null
+        }
+      ],
+      "relevant_found_at_k": {
+        "1": 1,
+        "3": 1,
+        "5": 1
+      }
+    },
+    {
+      "id": "ml_leakage_hinglish",
+      "question": "Scaler ko split se pehle poore dataset par fit karna leakage kyun hai?",
+      "relevant_documents": [
+        "ml_data_splits.md"
+      ],
+      "language": "hinglish",
+      "retrieved_chunk_count": 1,
+      "retrieved_documents": [
+        {
+          "filename": "ml_data_splits.md",
+          "document_id": "a7ced81afde84046ba327df8b593be9625cede017009664d2e9be75158f7fc39",
+          "similarity": 0.37969666719436646,
+          "chunk_id": "63b6dbef26fcd137312977c3b6af8d9cbc787fdb5ae662433870b65d20f22391",
+          "page_number": null
+        }
+      ],
+      "relevant_found_at_k": {
+        "1": 1,
+        "3": 1,
+        "5": 1
+      }
+    },
+    {
+      "id": "ml_multi",
+      "question": "Explain both how regularization addresses overfitting and how fitting preprocessing only on training data prevents leakage.",
+      "relevant_documents": [
+        "ml_overfitting.md",
+        "ml_data_splits.md"
+      ],
+      "language": "en",
+      "retrieved_chunk_count": 3,
+      "retrieved_documents": [
+        {
+          "filename": "ml_overfitting.md",
+          "document_id": "d9135e63cf64cc39a94a7f7e035ae710bf535dfa04fe6f99c1f5bf473d38ff0b",
+          "similarity": 0.6612643003463745,
+          "chunk_id": "cc60d48f7e25d79911de93f9738f2047c351cd5639ddc9a2b854c59fcde92b11",
+          "page_number": null
+        },
+        {
+          "filename": "ml_data_splits.md",
+          "document_id": "a7ced81afde84046ba327df8b593be9625cede017009664d2e9be75158f7fc39",
+          "similarity": 0.6046491265296936,
+          "chunk_id": "63b6dbef26fcd137312977c3b6af8d9cbc787fdb5ae662433870b65d20f22391",
+          "page_number": null
+        },
+        {
+          "filename": "dbms_normalization.md",
+          "document_id": "dcbd21acabd2a1e1a12a46f7d7013aa5ff5f4671d7e7d8255fe68b19c48d6a39",
+          "similarity": 0.305168092250824,
+          "chunk_id": "676c339aa65771900fd0efb472ffee064e26754fbbd152bbb730731e7c5d9c9b",
+          "page_number": null
+        }
+      ],
+      "relevant_found_at_k": {
+        "1": 1,
+        "3": 2,
+        "5": 2
+      }
+    },
+    {
+      "id": "db_multi",
+      "question": "Compare reducing repeated fields through normalization with making a bank transfer all-or-nothing through transactions.",
+      "relevant_documents": [
+        "dbms_normalization.md",
+        "dbms_transactions.md"
+      ],
+      "language": "en",
+      "retrieved_chunk_count": 2,
+      "retrieved_documents": [
+        {
+          "filename": "dbms_normalization.md",
+          "document_id": "dcbd21acabd2a1e1a12a46f7d7013aa5ff5f4671d7e7d8255fe68b19c48d6a39",
+          "similarity": 0.48954248428344727,
+          "chunk_id": "676c339aa65771900fd0efb472ffee064e26754fbbd152bbb730731e7c5d9c9b",
+          "page_number": null
+        },
+        {
+          "filename": "dbms_transactions.md",
+          "document_id": "733064e56ce3af05c88948b6f6a00575b9da883aad6f2c8147809d0d8fb06c20",
+          "similarity": 0.4281504154205322,
+          "chunk_id": "8332d5812df7046810bf1713657704cbb6e844cb9882f217f497022bf8dda51b",
+          "page_number": null
+        }
+      ],
+      "relevant_found_at_k": {
+        "1": 1,
+        "3": 2,
+        "5": 2
+      }
+    },
+    {
+      "id": "unanswerable_health",
+      "question": "What symptoms distinguish influenza from a common cold?",
+      "relevant_documents": [],
+      "language": "en",
+      "retrieved_chunk_count": 0,
+      "retrieved_documents": [],
+      "relevant_found_at_k": {
+        "1": 0,
+        "3": 0,
+        "5": 0
+      }
+    },
+    {
+      "id": "unanswerable_history",
+      "question": "In which year did the Battle of Waterloo take place?",
+      "relevant_documents": [],
+      "language": "en",
+      "retrieved_chunk_count": 0,
+      "retrieved_documents": [],
+      "relevant_found_at_k": {
+        "1": 0,
+        "3": 0,
+        "5": 0
+      }
+    }
+  ],
+  "limitations": [
+    "Small hand-authored learning dataset, fixed before measuring; not a held-out estimate of general retrieval quality.",
+    "Relevance labels and metric denominators are document-level. Answer generation, quiz quality, and factual entailment are not evaluated.",
+    "Questions and document coverage are limited; two Hinglish questions do not establish multilingual quality.",
+    "Threshold and chunk settings are fixed for this run. Approximate search may vary across library/runtime versions."
+  ]
+}

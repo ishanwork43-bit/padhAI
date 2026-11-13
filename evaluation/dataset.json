@@ -1,0 +1,174 @@
+{
+  "schema_version": 1,
+  "description": "Small hand-authored learning dataset. Fixed before measuring; not a held-out estimate of general retrieval quality. Relevance is labeled at document level.",
+  "documents": [
+    "dbms_normalization.md",
+    "dbms_transactions.md",
+    "cloud_services.md",
+    "network_protocols.md",
+    "os_memory.md",
+    "algorithms_search.md",
+    "ml_overfitting.md",
+    "ml_data_splits.md"
+  ],
+  "questions": [
+    {
+      "id": "norm_redundancy",
+      "question": "How should a relational design avoid storing the same student address in many enrollment rows?",
+      "relevant_documents": [
+        "dbms_normalization.md"
+      ],
+      "language": "en"
+    },
+    {
+      "id": "norm_hinglish",
+      "question": "Composite key ki partial dependency kaunsi normal form remove karti hai?",
+      "relevant_documents": [
+        "dbms_normalization.md"
+      ],
+      "language": "hinglish"
+    },
+    {
+      "id": "transaction_atomicity",
+      "question": "Why must both sides of a bank transfer succeed together or both be undone?",
+      "relevant_documents": [
+        "dbms_transactions.md"
+      ],
+      "language": "en"
+    },
+    {
+      "id": "transaction_isolation",
+      "question": "Which transaction property controls interference when two database operations run concurrently?",
+      "relevant_documents": [
+        "dbms_transactions.md"
+      ],
+      "language": "en"
+    },
+    {
+      "id": "cloud_iaas",
+      "question": "When I rent a virtual machine, who maintains its guest operating system?",
+      "relevant_documents": [
+        "cloud_services.md"
+      ],
+      "language": "en"
+    },
+    {
+      "id": "cloud_paas",
+      "question": "Which cloud model lets me deploy application code without managing the operating system?",
+      "relevant_documents": [
+        "cloud_services.md"
+      ],
+      "language": "en"
+    },
+    {
+      "id": "network_transport",
+      "question": "Which transport trades delivery and ordering guarantees for independent low-latency datagrams?",
+      "relevant_documents": [
+        "network_protocols.md"
+      ],
+      "language": "en"
+    },
+    {
+      "id": "network_dns",
+      "question": "What turns a website name into an address a client can contact?",
+      "relevant_documents": [
+        "network_protocols.md"
+      ],
+      "language": "en"
+    },
+    {
+      "id": "memory_address_space",
+      "question": "How can separate processes have their own logical addresses while sharing physical RAM?",
+      "relevant_documents": [
+        "os_memory.md"
+      ],
+      "language": "en"
+    },
+    {
+      "id": "memory_page_fault",
+      "question": "What happens when a program requests a page that is not currently in physical memory?",
+      "relevant_documents": [
+        "os_memory.md"
+      ],
+      "language": "en"
+    },
+    {
+      "id": "search_binary",
+      "question": "What condition must an array satisfy before repeatedly halving its search interval is reliable?",
+      "relevant_documents": [
+        "algorithms_search.md"
+      ],
+      "language": "en"
+    },
+    {
+      "id": "search_unsorted",
+      "question": "How can I look for a value in a small unsorted sequence without sorting it first?",
+      "relevant_documents": [
+        "algorithms_search.md"
+      ],
+      "language": "en"
+    },
+    {
+      "id": "ml_overfit",
+      "question": "What problem is suggested by excellent training performance but poor validation performance?",
+      "relevant_documents": [
+        "ml_overfitting.md"
+      ],
+      "language": "en"
+    },
+    {
+      "id": "ml_regularization",
+      "question": "How do weight penalties and stopping training early help a model generalize?",
+      "relevant_documents": [
+        "ml_overfitting.md"
+      ],
+      "language": "en"
+    },
+    {
+      "id": "ml_test_split",
+      "question": "Which dataset should be reserved for the final assessment instead of repeated model selection?",
+      "relevant_documents": [
+        "ml_data_splits.md"
+      ],
+      "language": "en"
+    },
+    {
+      "id": "ml_leakage_hinglish",
+      "question": "Scaler ko split se pehle poore dataset par fit karna leakage kyun hai?",
+      "relevant_documents": [
+        "ml_data_splits.md"
+      ],
+      "language": "hinglish"
+    },
+    {
+      "id": "ml_multi",
+      "question": "Explain both how regularization addresses overfitting and how fitting preprocessing only on training data prevents leakage.",
+      "relevant_documents": [
+        "ml_overfitting.md",
+        "ml_data_splits.md"
+      ],
+      "language": "en"
+    },
+    {
+      "id": "db_multi",
+      "question": "Compare reducing repeated fields through normalization with making a bank transfer all-or-nothing through transactions.",
+      "relevant_documents": [
+        "dbms_normalization.md",
+        "dbms_transactions.md"
+      ],
+      "language": "en"
+    },
+    {
+      "id": "unanswerable_health",
+      "question": "What symptoms distinguish influenza from a common cold?",
+      "relevant_documents": [],
+      "language": "en"
+    },
+    {
+      "id": "unanswerable_history",
+      "question": "In which year did the Battle of Waterloo take place?",
+      "relevant_documents": [],
+      "language": "en"
+    }
+  ]
+}
