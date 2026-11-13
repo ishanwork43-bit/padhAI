@@ -1,0 +1,4 @@
+# The Linux CPU wheel avoids downloading CUDA libraries on Community Cloud.
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.15.0+cpu
+-r ../../requirements.txt
