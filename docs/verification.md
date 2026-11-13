@@ -116,4 +116,34 @@ returned the custom 404. Its deployed response includes the configured headers.
 Live browser checks passed at 1440, 390, and 320 pixels, including FAQ expansion
 and the explicit pending app-launch state. CI also passed all three jobs on
 commit `3d468a5` (Python 3.11/3.12 and the 17-test Node landing build).
-The Streamlit hosted app itself remains unverified and unlinked.
+At that initial deployment, the Streamlit app remained unverified and unlinked.
+
+## Connected production app — 2026-11-14
+
+The Netlify frontend now opens `https://padhaistudy.streamlit.app/` from both
+**Open PadhAI** buttons. The public destination is persisted in `netlify.toml`.
+The 17 existing Node checks and Netlify's local production build passed. Deployment
+`6af795ace4749b2373c80036` was checked against the intended seven-file publish set;
+every deployed file matched its local build bytes, and the configured response
+headers remained active. Requests for `.env`, Streamlit secrets, local Netlify
+state, and the build configuration did not serve those files.
+
+Live browser checks covered both launch buttons, the new-tab destination and
+absent `window.opener`, the FAQ, sample downloads, desktop and 390/320-pixel
+landing layouts, and the hosted app at mobile width. No page exceptions or
+horizontal document overflow were found in these checks.
+
+The actual Streamlit application was tested through its hosted app frame:
+
+- PDF/TXT upload, extracted-text preview, and duplicate-file handling.
+- Real embedding-model indexing and semantic retrieval of the bundled samples.
+- DBMS query matched the PDF on page 1; the IaaS query matched the cloud text.
+- An unrelated question returned the no-evidence state; an empty question was rejected.
+- Quiz navigation and disabled generation controls with no configured OpenAI key.
+- Clearing the test notes invalidated search; a fresh launch contained no prior notes.
+
+Tests used only the public sample documents and cleared their own session.
+The app reports no OpenAI key, so live AI answers and quiz generation remain
+unverified and disabled. No paid calls were made, and no credentials were added
+to the frontend or repository. These checks validate the exercised integration
+and workflows; they do not constitute a general security or accessibility audit.

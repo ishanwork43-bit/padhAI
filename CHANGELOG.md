@@ -1,5 +1,13 @@
 # Changelog
 
+## Frontend connection — 2026-11-14
+
+- Connected both Netlify launch buttons to https://padhaistudy.streamlit.app/.
+- Persisted the public app URL in Netlify's build configuration and redeployed.
+- Verified live uploads, indexing, search/citations, input handling, session cleanup,
+  and desktop/mobile launch flows. No credentials were added to the frontend.
+- Optional AI generation remains disabled because the app reports no OpenAI key.
+
 ## Unreleased hosting additions — 2026-11-13
 
 - Published the source and v0.1.0 tag to GitHub at the owner's requested public visibility.

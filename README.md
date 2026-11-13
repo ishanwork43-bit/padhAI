@@ -24,8 +24,11 @@ is **not full local AI answer generation**. Quizzes require an OpenAI API key.
 
 Source: [ishanwork43-bit/padhAI](https://github.com/ishanwork43-bit/padhAI).
 The [Netlify landing page](https://padhai-ishan.netlify.app) introduces the project
-and provides public sample notes. The full Python app runs separately on Streamlit
-Community Cloud; its launch link stays unavailable until that app is deployed.
+and provides public sample notes. Both **Open PadhAI** buttons open the full
+[Streamlit study app](https://padhaistudy.streamlit.app/) in a new tab.
+Uploads, embeddings, and search run on the Streamlit server. The frontend needs
+only the public app URL configured in `netlify.toml`; API keys belong in Streamlit's
+server-side Secrets settings.
 Follow the [deployment guide](docs/deployment.md) for the exact settings.
 
 ## Run locally on your Mac

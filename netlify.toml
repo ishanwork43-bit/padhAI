@@ -5,6 +5,8 @@
 
 [build.environment]
   NODE_VERSION = "24"
+  # Public destination for both launch buttons; no credentials belong here.
+  APP_URL = "https://padhaistudy.streamlit.app/"
 
 [[headers]]
   for = "/*"

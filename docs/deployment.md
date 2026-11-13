@@ -41,10 +41,12 @@ Import the same GitHub repository into Netlify. The root `netlify.toml` configur
 base directory `web`, build command `npm run build`, and publish directory
 `web/dist` (the `dist` setting is relative to the base directory).
 
-Set the Netlify build environment variable **`APP_URL`** to the real Streamlit URL
-from step 1. Use its HTTPS origin without credentials, query parameters, or a
-fragment. No secret belongs in this value: it becomes a public link. Netlify
-builds fail when this URL is invalid. Until it is provided, the landing page
+The root `netlify.toml` now sets **`APP_URL`** under `[build.environment]` to
+`https://padhaistudy.streamlit.app/`. Both launch buttons use this public address.
+Update that setting if the app's URL changes. Use its HTTPS origin without
+credentials, query parameters, or a fragment. No secret belongs in this file or
+value: the URL becomes a public link. Builds fail when the URL is invalid.
+When building without any `APP_URL`, the landing page
 clearly shows **Study app launching soon** and contains no app launch link.
 Deploying that pending page does not deploy the Python app.
 
@@ -65,18 +67,23 @@ python3 -m http.server 8080 --directory dist
 
 Open `http://localhost:8080`. The launch button is unavailable until an `APP_URL`
 is supplied. To preview the actual link, use
-`APP_URL=https://YOUR-APP.streamlit.app npm run build` with your real URL.
+`APP_URL=https://padhaistudy.streamlit.app/ npm run build`.
 
 For an authenticated Netlify CLI deploy, run from `web` after choosing the
 intended Netlify account/site:
 
 ```bash
-APP_URL=https://YOUR-APP.streamlit.app npm run build
+APP_URL=https://padhaistudy.streamlit.app/ npm run build
 netlify deploy --prod --dir dist --no-build
 ```
 
-Set `APP_URL` in Netlify too when enabling automatic Git-based builds. A manual
-CLI deployment does not by itself connect future GitHub pushes to Netlify.
+Alternatively, run `netlify build --context production` from the repository root
+to use the URL in `netlify.toml`. This build was verified locally with
+`netlify build --context production --offline`. The current connection did not
+permit Netlify dashboard environment-variable writes, so the public URL is
+persisted in the repository's build configuration instead. No new credential is
+needed for this integration. Git-based Netlify builds also read this file.
+A manual CLI deployment does not by itself connect future GitHub pushes to Netlify.
 
 ## Data and access
 
@@ -91,10 +98,20 @@ Use the hosting providers' access controls if you need a restricted demo.
 - GitHub: [public source](https://github.com/ishanwork43-bit/padhAI) and
   [v0.1.0 release](https://github.com/ishanwork43-bit/padhAI/releases/tag/v0.1.0).
 - Netlify: **[padhai-ishan.netlify.app](https://padhai-ishan.netlify.app)**.
-  Deployment `6af71eff71b56bbae4b4b6de` reached `ready` on 2026-11-13. Live HTTP
-  checks matched the generated assets, and desktop/mobile browser checks passed.
-- Streamlit: **pending**. No working application URL has been supplied or verified.
-  The Netlify page explicitly keeps the launch link unavailable until then.
+  Deployment `6af795ace4749b2373c80036` connects both launch buttons to Streamlit.
+  On 2026-11-14, all seven published files matched the generated build and both
+  launch buttons were verified in desktop/mobile browsers.
+- Streamlit: **[padhaistudy.streamlit.app](https://padhaistudy.streamlit.app/)**.
+  Verified PDF/TXT uploads, duplicate handling, real-model indexing, DBMS/cloud
+  searches and source/page citations, unrelated/empty questions, and clearing
+  the test session. A fresh launch had an empty notes session.
+- Optional AI: the app reports no configured OpenAI key. Answer and quiz buttons
+  were verified to stay disabled; no paid generation calls were made.
+
+The static publish folder contains only the landing assets and public samples.
+Environment files, Streamlit secrets, local Netlify state, and build configuration
+are not served by the Netlify site. Only the public app URL was added for this
+connection; no API key or authentication token was put in the frontend or source.
 
 The Netlify deployment was a manual CLI upload. Automatic GitHub-to-Netlify
 builds are not connected; import/link this repository in Netlify to enable them.
