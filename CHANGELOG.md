@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.0 — integrated platform (deployment pending)
+
+- React/Vite/Tailwind frontend with six connected pages, responsive navigation and light/dark appearance.
+- FastAPI wraps the existing document, Chroma, RAG/citation and quiz pipeline.
+- Temporary isolated workspaces, secure cookies/CSRF, bounded jobs/uploads, durable metadata, expiry and deletion controls.
+- API, React, hosting and real browser workflow tests; Netlify proxy and Render/Docker deployment configurations.
+- The 0.1.0 implementation and public deployments remain available until the replacement passes hosted verification.
+
 ## Frontend connection — 2026-11-14
 
 - Connected both Netlify launch buttons to https://padhaistudy.streamlit.app/.

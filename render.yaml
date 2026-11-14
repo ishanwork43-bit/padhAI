@@ -1,0 +1,38 @@
+# Creates a NEW backend; it does not modify the existing Netlify/Streamlit sites.
+# Review Render's current price before creating this paid service + disk.
+services:
+  - type: web
+    name: padhai-api
+    runtime: docker
+    repo: https://github.com/ishanwork43-bit/padhAI
+    branch: feat/integrated-platform
+    dockerfilePath: ./deployment/platform/Dockerfile
+    dockerContext: .
+    plan: standard
+    region: singapore
+    numInstances: 1
+    autoDeployTrigger: off
+    healthCheckPath: /api/health
+    disk:
+      name: padhai-workspaces
+      mountPath: /data
+      sizeGB: 1
+    envVars:
+      - key: API_ENV
+        value: production
+      - key: API_ALLOWED_ORIGINS
+        sync: false
+      - key: API_DATABASE_PATH
+        value: /data/padhai.sqlite3
+      - key: WORKSPACE_TTL_SECONDS
+        value: "86400"
+      - key: MAX_WORKSPACES
+        value: "100"
+      - key: ENABLE_PAID_AI
+        value: "false"
+      - key: AI_REQUESTS_PER_WORKSPACE
+        value: "5"
+      - key: AI_REQUESTS_PER_DAY
+        value: "50"
+      - key: OPENAI_MODEL
+        value: gpt-4o-mini

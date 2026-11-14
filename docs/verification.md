@@ -1,3 +1,5 @@
+> Legacy 0.1.0 reference retained for the current deployment and rollback. See the [integrated platform guide](platform/verification.md) for the replacement architecture.
+
 # Final verification
 
 The portfolio MVP was checked in the supplied Linux environment with Python
