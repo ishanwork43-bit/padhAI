@@ -19,3 +19,8 @@ chroma/
 dist/
 node_modules/
 .netlify/
+
+# Platform build and browser artifacts
+*.tsbuildinfo
+frontend/test-results/
+frontend/playwright-report/

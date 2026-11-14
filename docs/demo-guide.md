@@ -1,3 +1,5 @@
+> Legacy 0.1.0 reference retained for the current deployment and rollback. See the [integrated platform guide](platform/demo-guide.md) for the replacement architecture.
+
 # PadhAI: a 5–7 minute portfolio demo
 
 Use the included public sample notes and the keyless workflow. The recorded
