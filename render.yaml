@@ -8,10 +8,10 @@ services:
     branch: feat/integrated-platform
     dockerfilePath: ./deployment/platform/Dockerfile
     dockerContext: .
-    plan: standard
+    plan: 1c-2g
     region: singapore
     numInstances: 1
-    autoDeployTrigger: off
+    autoDeployTrigger: "off"
     healthCheckPath: /api/health
     disk:
       name: padhai-workspaces
@@ -21,7 +21,9 @@ services:
       - key: API_ENV
         value: production
       - key: API_ALLOWED_ORIGINS
-        sync: false
+        # Exact origins for this repository's existing site and planned CLI alias.
+        # Change both values when deploying a fork or using a custom domain.
+        value: https://padhai-ishan.netlify.app,https://platform-preview--padhai-ishan.netlify.app
       - key: API_DATABASE_PATH
         value: /data/padhai.sqlite3
       - key: WORKSPACE_TTL_SECONDS

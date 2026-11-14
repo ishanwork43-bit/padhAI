@@ -4,9 +4,11 @@ The old Netlify/Streamlit sites are the rollback path. These instructions deploy
 
 ## 1. Provision the Python backend
 
-Recommended: Render Docker web service, one instance, Standard plan (at least 2 GB RAM), 1 GB persistent disk. A sleeping free service is unsuitable for a dependable model-backed demo and persistent temporary workspaces. Confirm current host prices before provisioning.
+Recommended: Render Docker web service, one instance, 1 CPU / 2 GB plan (`1c-2g`), 1 GB persistent disk. A sleeping free service is unsuitable for a dependable model-backed demo and persistent temporary workspaces. [Render's listed prices](https://render.com/pricing), checked November 14, 2026, are **US$25/month compute + US$0.25/month disk** for this configuration, before taxes, usage overages, or workspace charges. Review the current total in Render before approving creation of the paid service.
 
-Use `render.yaml` as a Blueprint from `feat/integrated-platform`, or create a service manually:
+Open [the Render setup for this implementation branch](https://render.com/deploy?repo=https%3A%2F%2Fgithub.com%2Fishanwork43-bit%2FpadhAI%2Ftree%2Ffeat%2Fintegrated-platform), sign in to Render, and review the Blueprint. The link selects `feat/integrated-platform`; opening it does not create a service. The Blueprint contains only public configuration and needs no AI API key. Keep paid AI disabled while verifying the replacement. Create the service only after accepting Render's displayed charges, then record its public HTTPS URL. No passwords or API keys need to be shared in chat.
+
+Alternatively, use `render.yaml` as a Blueprint from `feat/integrated-platform`, or create a service manually:
 
 | Setting | Value |
 | --- | --- |
@@ -22,11 +24,11 @@ Use `render.yaml` as a Blueprint from `feat/integrated-platform`, or create a se
 
 The image runs as UID 10001. Confirm the attached volume is writable by that user; do not make the database world-readable. A fresh Docker named volume inherits `/data` permissions from the image. A host-mounted volume must have suitable ownership. Failed storage permissions cause startup to fail instead of falling back to transient storage.
 
-Set these backend environment variables in the host dashboard:
+The Blueprint supplies these backend environment variables. For a manual service, set them in the host dashboard:
 
 ```dotenv
 API_ENV=production
-API_ALLOWED_ORIGINS=https://YOUR-STABLE-PREVIEW.netlify.app,https://padhai-ishan.netlify.app
+API_ALLOWED_ORIGINS=https://padhai-ishan.netlify.app,https://platform-preview--padhai-ishan.netlify.app
 API_DATABASE_PATH=/data/padhai.sqlite3
 WORKSPACE_TTL_SECONDS=86400
 MAX_WORKSPACES=100
@@ -35,7 +37,7 @@ AI_REQUESTS_PER_WORKSPACE=5
 AI_REQUESTS_PER_DAY=50
 ```
 
-Replace the preview placeholder with the actual origin, or initially allow only the production origin and add the exact preview origin once allocated. Do not use wildcard preview domains. There are no required paid provider credentials for search. Build-time model caching requires outbound HTTPS to PyPI, the CPU PyTorch index, and Hugging Face. Runtime model loading is offline.
+These exact origins belong to the existing `padhai-ishan` Netlify site and the planned `platform-preview` CLI alias. The alias is configured below; its presence here does not mean the replacement is already deployed. If deploying a fork, another site, or a custom domain, replace the origins. Confirm that Netlify returns the expected alias URL and update the allowlist if it differs. Do not use wildcard preview domains. There are no required paid provider credentials for search. Build-time model caching requires outbound HTTPS to PyPI, the CPU PyTorch index, and Hugging Face. Runtime model loading is offline.
 
 Wait for a successful deploy and verify `https://YOUR-BACKEND.onrender.com/api/health` returns `{"status":"ok","version":"0.2.0"}`. Record the HTTPS origin. This is a readiness check for the API/database; it does not claim that a model has already been loaded into RAM.
 
@@ -60,7 +62,7 @@ PADHAI_API_ORIGIN=https://YOUR-BACKEND.onrender.com npm --prefix frontend run bu
 netlify deploy --site padhai-ishan --dir frontend/dist --alias platform-preview
 ```
 
-**Do not add `--prod` yet.** Use the actual returned draft origin in `API_ALLOWED_ORIGINS`, redeploy/restart the API configuration, and run the verification below. A stable branch/alias preview is easier to allowlist than a new random deployment URL each time. Preview workspaces use their own origin cookies and will not automatically migrate to production.
+**Do not add `--prod` yet.** The expected alias URL is `https://platform-preview--padhai-ishan.netlify.app`, already included in the Blueprint allowlist. Compare it with the actual returned URL. If different, update `API_ALLOWED_ORIGINS` and redeploy/restart the API configuration before verification. A stable branch/alias preview is easier to allowlist than a new random deployment URL each time. Preview workspaces use their own origin cookies and will not automatically migrate to production.
 
 Netlify's security headers permit local scripts/fonts and same-origin API connections. Inline styles are allowed because dialog positioning and appearance use style attributes; inline scripts remain blocked. Frontend files must contain no provider keys. Delete any old `APP_URL` environment setting after cutover; the new build does not read it.
 

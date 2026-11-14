@@ -96,7 +96,9 @@ Defaults: 10 MiB/file, 20 notes/workspace, 50 MiB original-upload allowance/work
 
 ## Hosting and optional AI
 
-Use **Netlify for the frontend** and a **Render Docker web service with at least 2 GB RAM and a persistent disk** for FastAPI. `render.yaml` describes a single Standard instance and 1 GB disk; review Render's current price before provisioning. A comparable single-instance container host with persistent storage also works.
+Use **Netlify for the frontend** and a **Render Docker web service with at least 2 GB RAM and a persistent disk** for FastAPI. `render.yaml` describes a single 1 CPU / 2 GB (`1c-2g`) instance and 1 GB disk; review Render's current price before provisioning. A comparable single-instance container host with persistent storage also works.
+
+[Review the Render backend setup](https://render.com/deploy?repo=https%3A%2F%2Fgithub.com%2Fishanwork43-bit%2FpadhAI%2Ftree%2Ffeat%2Fintegrated-platform) for this implementation branch. As of November 14, 2026, [Render's listed prices](https://render.com/pricing) are **US$25/month for compute + US$0.25/month for the 1 GB disk**, before taxes, usage overages, or workspace charges. Creating the service starts a paid subscription; opening the setup link does not provision it. The Blueprint preconfigures the existing Netlify production origin and the planned `platform-preview` alias, with paid AI disabled. For a fork, update those origins before deployment.
 
 Set Netlify's public `PADHAI_API_ORIGIN` to the actual backend HTTPS origin. The build writes a reverse proxy rule before the SPA fallback and fails if that setting is missing or unsafe. Set backend `API_ALLOWED_ORIGINS` to the exact preview/production frontend origins, never `*`. Production uses a Secure `__Host-` cookie. The browser talks only to its Netlify origin; backend and frontend remain separate infrastructure behind one user-facing site.
 
