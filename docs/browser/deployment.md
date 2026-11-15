@@ -24,6 +24,10 @@ At the actual HTTPS preview:
 
 Run the automated integration suite with `E2E_URL=https://ACTUAL-PREVIEW.netlify.app npm --prefix frontend run test:e2e`. Use `CHROMIUM_PATH` only if using an already installed Chromium; otherwise install Playwright Chromium first. These tests create only local browser sample data and do not upload it.
 
+## Verified candidate
+
+The verified preview is [browser-preview--padhai-ishan.netlify.app](https://browser-preview--padhai-ishan.netlify.app), deploy `6af96d1ab0605621c3593074`. Its application source is `adf3cf92a573d3996208efe5bf8d68be609045bd`. All five hosted integration scenarios passed; see [verification](verification.md). The previous production deploy `6af795ace4749b2373c80036` remains published.
+
 ## Prepare production
 
 After all checks pass, review the preview, record the commit/deploy ID, and keep the exact verified `frontend/dist`. Only after production is approved, run `netlify deploy --site padhai-ishan --dir frontend/dist --prod --no-build`. Recheck sources, refresh, and deletion on the production domain. Retain the previous Netlify deploy and existing Streamlit app as rollback options.

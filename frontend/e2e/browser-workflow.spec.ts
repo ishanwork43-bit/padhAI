@@ -133,6 +133,8 @@ test('real PDF/TXT/Markdown, quantized semantic retrieval, persistence, isolatio
   await page.getByRole('link', { name: 'Settings', exact: true }).click();
   await page.getByLabel('Workspace name', { exact: true }).fill('My local library');
   await page.getByRole('button', { name: 'Save preferences' }).click();
+  // A click starts an asynchronous IndexedDB transaction; reload after it commits.
+  await expect(page.locator('.workspace-card strong')).toHaveText('My local library');
   await page.reload();
   await expect(page.getByLabel('Workspace name', { exact: true })).toHaveValue('My local library');
   await page.getByRole('button', { name: 'Clear notes', exact: true }).click();

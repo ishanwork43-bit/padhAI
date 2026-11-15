@@ -9,7 +9,7 @@ Local verification on 2026-11-15, Node 24, Python 3.12, and Chromium on Linux. T
 | Static/server hosting configuration tests | 12 passed |
 | TypeScript + production browser build | Passed |
 | TypeScript + server-mode frontend build | Passed |
-| Browser-only Playwright suite with actual model and files | 5 passed |
+| Browser-only Playwright suite with actual model and files | 5 passed locally; 5 passed on Netlify HTTPS |
 | Retained server-mode Playwright workflow against real FastAPI/MiniLM | 2 passed |
 
 ## What the browser tests exercise
@@ -53,4 +53,16 @@ Chromium desktop/mobile viewport emulation is verified. Physical low-memory phon
 
 [Desktop workspace](screenshots/dashboard.png) · [Mobile library](screenshots/mobile.png) · [Landing page](screenshots/landing.png)
 
-Hosted preview verification and the immutable deploy reference will be recorded after deployment. Production has not been replaced.
+## Hosted preview and production preparation
+
+- Preview: https://browser-preview--padhai-ishan.netlify.app
+- Immutable tested deployment: https://6af96d1ab0605621c3593074--padhai-ishan.netlify.app
+- Netlify deploy ID: `6af96d1ab0605621c3593074`
+- Application source commit: `adf3cf92a573d3996208efe5bf8d68be609045bd` (subsequent documentation/test synchronization changes do not alter the deployed application).
+- GitHub PR and CI checks: https://github.com/ishanwork43-bit/padhAI/pull/2
+
+All five integration scenarios passed against the actual HTTPS preview, using its real model, workers, and security headers (1 minute 36 seconds). `/`, `/ask`, and `/settings` return the app directly with HTTP 200. Model configuration returns JSON and the runtime returns `application/wasm`. The delivered CSP permits only same-origin connections, workers, and WebAssembly compilation; `nosniff`, frame denial, no-referrer, and disabled camera/microphone/geolocation headers are present. No browser request to an API or third-party origin occurred in the complete import/search workflow.
+
+The CI persistence test waits for the saved workspace name before refreshing; clicking Save alone does not mean its asynchronous IndexedDB transaction has committed. The fresh CI workflow also installs from the lockfile, verifies/downloads pinned model files, and runs the real-model browser suite.
+
+Netlify's account plan was read back as **Free**. Production remains at deploy `6af795ace4749b2373c80036`; neither it nor the Streamlit app was replaced. The tested build and a file-hash manifest are retained for production promotion. Follow [the cutover guide](deployment.md) after the preview is approved. Preview and production storage remain separate origins.

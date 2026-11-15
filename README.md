@@ -2,6 +2,8 @@
 
 A polished study workspace for your own notes: **React + Vite + Tailwind**, real semantic search, PDF page references, and source previews. This branch runs entirely in the browser and deploys as static files on Netlify. No Python host, account, API key, or paid inference is needed.
 
+**[Open the verified Netlify preview](https://browser-preview--padhai-ishan.netlify.app)** · [Implementation PR](https://github.com/ishanwork43-bit/padhAI/pull/2) · [Verification evidence](docs/browser/verification.md)
+
 ![PadhAI browser workspace](docs/browser/screenshots/dashboard.png)
 
 ## Two architectures, both preserved
