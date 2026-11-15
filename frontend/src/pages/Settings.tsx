@@ -1,3 +1,4 @@
+import { BROWSER_MODE } from '../lib/mode';
 import { useEffect, useState } from 'react';
 import {
   Check,
@@ -126,7 +127,11 @@ export function Settings() {
         <section id="ai" className="settings-section">
           <div className="settings-intro">
             <h2>AI & search</h2>
-            <p>Semantic search is keyless. Generated answers and quizzes are optional.</p>
+            <p>
+              {BROWSER_MODE
+                ? 'Semantic search is keyless. Generated answers and quizzes are unavailable in this edition.'
+                : 'Semantic search is keyless. Generated answers and quizzes are optional.'}
+            </p>
           </div>
           <div className="surface settings-panel">
             <div className="settings-status">
@@ -136,8 +141,9 @@ export function Settings() {
               <div>
                 <strong>Local semantic search</strong>
                 <p>
-                  Embeddings run on the study server. No paid provider receives your search
-                  requests.
+                  {BROWSER_MODE
+                    ? 'A quantized MiniLM model runs in a worker on your device. The first use downloads about 45 MB of model and runtime files; your notes and questions never leave this browser.'
+                    : 'Embeddings run on the study server. No paid provider receives your search requests.'}
                 </p>
               </div>
               <Badge tone="green">Available</Badge>
@@ -152,31 +158,37 @@ export function Settings() {
                 <p>
                   {workspace.capabilities.ai_available
                     ? `${workspace.capabilities.ai_model} · ${workspace.capabilities.ai_requests_remaining} requests remaining in the current allowance.`
-                    : 'Not enabled on this server. Only the server administrator can configure a provider key.'}
+                    : BROWSER_MODE
+                      ? 'Temporarily unavailable in this browser edition. Generated answers and quizzes require the hosted backend.'
+                      : 'Not enabled on this server. Only the server administrator can configure a provider key.'}
                 </p>
               </div>
               <Badge tone={workspace.capabilities.ai_available ? 'green' : 'neutral'}>
                 {workspace.capabilities.ai_available ? 'Available' : 'Off'}
               </Badge>
             </div>
-            <label className="consent-control">
-              <input
-                type="checkbox"
-                checked={consent}
-                disabled={!workspace.capabilities.ai_available && !consent}
-                onChange={(e) => setConsent(e.target.checked)}
-              />
-              <span>
-                <strong>Allow excerpts to be sent to OpenAI for generation</strong>
-                <small>
-                  Only when you request an answer or quiz. Requests include relevant note text and
-                  filenames. Provider processing policies apply. Failed generation also uses an
-                  allowance slot.
-                </small>
-              </span>
-            </label>
+            {!BROWSER_MODE && (
+              <label className="consent-control">
+                <input
+                  type="checkbox"
+                  checked={consent}
+                  disabled={!workspace.capabilities.ai_available && !consent}
+                  onChange={(e) => setConsent(e.target.checked)}
+                />
+                <span>
+                  <strong>Allow excerpts to be sent to OpenAI for generation</strong>
+                  <small>
+                    Only when you request an answer or quiz. Requests include relevant note text and
+                    filenames. Provider processing policies apply. Failed generation also uses an
+                    allowance slot.
+                  </small>
+                </span>
+              </label>
+            )}
             <p className="small-muted">
-              Keys stay on the backend. This interface never asks for or stores an API key.
+              {BROWSER_MODE
+                ? 'No API key or paid AI service is used in this edition.'
+                : 'Keys stay on the backend. This interface never asks for or stores an API key.'}
             </p>
           </div>
         </section>
@@ -215,7 +227,11 @@ export function Settings() {
       <section id="data" className="settings-section">
         <div className="settings-intro">
           <h2>Data & privacy</h2>
-          <p>A temporary workspace with clear boundaries.</p>
+          <p>
+            {BROWSER_MODE
+              ? 'A local library with clear boundaries.'
+              : 'A temporary workspace with clear boundaries.'}
+          </p>
         </div>
         <div className="surface settings-panel">
           <div className="storage-heading">
@@ -240,44 +256,54 @@ export function Settings() {
             <div>
               <dt>What is stored</dt>
               <dd>
-                Extracted text, filenames, document metadata, preferences, and generated study
-                results are stored on the backend. Original files are discarded after processing.
-                The search index lives in server memory.
+                {BROWSER_MODE
+                  ? 'Extracted text, filenames, preferences, and semantic vectors are stored in IndexedDB on this device. Original files are not retained. The public model is cached separately; it contains no notes.'
+                  : 'Extracted text, filenames, document metadata, preferences, and generated study results are stored on the backend. Original files are discarded after processing. The search index lives in server memory.'}
               </dd>
             </div>
             <div>
               <dt>Who can access it</dt>
               <dd>
-                This browser holds a private, HttpOnly workspace cookie. There is no account or
-                recovery link. Other visitors get separate workspaces. The service operator can
-                access server storage.
+                {BROWSER_MODE
+                  ? 'Anyone using this browser profile can open its notes. Other devices and browser profiles have separate libraries. There is no login or cloud sync; the site does not upload note content.'
+                  : 'This browser holds a private, HttpOnly workspace cookie. There is no account or recovery link. Other visitors get separate workspaces. The service operator can access server storage.'}
               </dd>
             </div>
             <div>
-              <dt>Automatic expiry</dt>
+              <dt>{BROWSER_MODE ? 'Persistence & recovery' : 'Automatic expiry'}</dt>
               <dd>
-                {new Date(workspace.expires_at).toLocaleString(undefined, {
-                  dateStyle: 'medium',
-                  timeStyle: 'short',
-                })}
-                . The expiry is fixed; continuing to study does not extend it. Expired data is
-                removed on access or by the cleanup loop, normally within 30 seconds while the
-                server runs.
+                {BROWSER_MODE ? (
+                  'Notes and indexes survive refresh on this same site and browser. Clearing site data, private browsing, browser eviction, or changing the site address can remove access. Keep your originals; local storage is not a backup.'
+                ) : (
+                  <>
+                    {new Date(workspace.expires_at).toLocaleString(undefined, {
+                      dateStyle: 'medium',
+                      timeStyle: 'short',
+                    })}
+                    . The expiry is fixed; continuing to study does not extend it. Expired data is
+                    removed on access or by the cleanup loop, normally within 30 seconds while the
+                    server runs.
+                  </>
+                )}
               </dd>
             </div>
             <div>
               <dt>When you delete</dt>
               <dd>
-                Text, associated study results, and the active search index are removed. In-flight
-                work cannot save deleted results. Provider requests already sent cannot be recalled;
-                host backups follow the operator’s retention policy. Keep your own original notes.
+                {BROWSER_MODE
+                  ? 'Deleting a note removes its saved text and invalidates the index. Clearing notes removes all documents, vectors, and activity; reset also removes preferences. In-flight processing cannot restore deleted notes. Browser-level forensic erasure is not guaranteed.'
+                  : 'Text, associated study results, and the active search index are removed. In-flight work cannot save deleted results. Provider requests already sent cannot be recalled; host backups follow the operator’s retention policy. Keep your own original notes.'}
               </dd>
             </div>
           </dl>
           <div className="danger-actions">
             <div>
               <strong>Clear all notes</strong>
-              <p>Remove documents, quizzes, answers, and activity.</p>
+              <p>
+                {BROWSER_MODE
+                  ? 'Remove documents, search vectors, and activity.'
+                  : 'Remove documents, quizzes, answers, and activity.'}
+              </p>
             </div>
             <Button
               variant="danger"
@@ -318,7 +344,9 @@ export function Settings() {
         <div className="modal-body">
           <p>
             {action === 'notes'
-              ? 'All extracted documents, quizzes, answer results, and activity will be removed.'
+              ? BROWSER_MODE
+                ? 'All extracted documents, search vectors, and activity will be removed.'
+                : 'All extracted documents, quizzes, answer results, and activity will be removed.'
               : 'All notes, study results, activity, and preferences will be deleted. A new empty workspace will open.'}
           </p>
           {deleteError && <ErrorNotice message={deleteError} />}

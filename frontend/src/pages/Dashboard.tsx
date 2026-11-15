@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { BROWSER_MODE } from '../lib/mode';
 import { Link, useOutletContext } from 'react-router-dom';
 import {
   ArrowRight,
@@ -138,12 +139,14 @@ export function Dashboard() {
         </article>
         <article className="stat-card">
           <div>
-            <span>Quizzes completed</span>
-            <strong>{workspace.stats.completed_quizzes}</strong>
+            <span>{BROWSER_MODE ? 'Storage location' : 'Quizzes completed'}</span>
+            <strong>{BROWSER_MODE ? 'Your device' : workspace.stats.completed_quizzes}</strong>
             <p>
-              {workspace.stats.completed_quizzes
-                ? 'Practice that puts ideas into place.'
-                : 'A little practice goes a long way.'}
+              {BROWSER_MODE
+                ? 'Saved in this browser. No cloud uploads.'
+                : workspace.stats.completed_quizzes
+                  ? 'Practice that puts ideas into place.'
+                  : 'A little practice goes a long way.'}
             </p>
           </div>
           <span className="stat-icon peach">
@@ -240,7 +243,9 @@ export function Dashboard() {
               title: 'Put your understanding to work',
               description: workspace.capabilities.ai_available
                 ? 'Create a quiz from your notes'
-                : 'AI quizzes are optional',
+                : BROWSER_MODE
+                  ? 'AI quizzes are unavailable in this edition'
+                  : 'AI quizzes are optional',
               done: workspace.stats.completed_quizzes > 0,
               to: '/quiz',
             },

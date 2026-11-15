@@ -1,137 +1,102 @@
-# PadhAI
+# PadhAI — Padhai ka smarter way.
 
-**Padhai ka smarter way.** One study workspace for your notes, questions, sources, and practice.
+A polished study workspace for your own notes: **React + Vite + Tailwind**, real semantic search, PDF page references, and source previews. This branch runs entirely in the browser and deploys as static files on Netlify. No Python host, account, API key, or paid inference is needed.
 
-The **0.2.0 platform** uses **React 19 + Vite + Tailwind CSS** and **Python FastAPI**. Netlify serves the frontend and proxies its `/api/*` requests to a Python backend. Uploads, semantic search, source previews, and quizzes stay inside the same interface. There are no Streamlit redirects in the new frontend.
+![PadhAI browser workspace](docs/browser/screenshots/dashboard.png)
 
-![PadhAI workspace with real sample notes](docs/platform/screenshots/dashboard.png)
+## Two architectures, both preserved
 
-**Release status:** the replacement is implemented and verified locally. The existing public Netlify and Streamlit deployments remain intact while a replacement backend and Netlify preview are prepared. This branch does not claim a completed production cutover. See the [audit](docs/platform/audit.md), [deployment guide](docs/platform/deployment.md), and [verification report](docs/platform/verification.md).
+| | Browser edition — this branch | Full-stack platform — preserved |
+| --- | --- | --- |
+| Branch | [`feat/browser-only-padhai`](https://github.com/ishanwork43-bit/padhAI/tree/feat/browser-only-padhai) | [`feat/integrated-platform`](https://github.com/ishanwork43-bit/padhAI/tree/feat/integrated-platform) |
+| Interface | Existing React / Vite / Tailwind design; six pages | Same design with server features |
+| Processing | PDF.js + text decoder in Web Workers | Python extraction in a bounded subprocess |
+| Semantic search | Transformers.js, quantized MiniLM, local cosine ranking | Sentence Transformers, MiniLM, Chroma retrieval |
+| Citations | Original text, exact offsets, PDF page numbers | Validated retrieval and generated-answer citations |
+| Storage | IndexedDB in this browser, including vectors | Owner-isolated SQLite + in-memory Chroma indexes |
+| Generated answers / quizzes | Clearly unavailable; no imitation responses | Existing server-side RAG, citation validation, and quiz scoring |
+| Hosting | Static Netlify Free plan, within its included usage | Netlify + a separately hosted FastAPI service |
+| Keys | None | Optional AI key stays only on the backend |
 
-## What works
+**The complete Python implementation is retained.** `api/`, `src/`, legacy Streamlit code, backend tests, and Docker/Render files have not been replaced. The original full-stack frontend HTTP client is preserved in `frontend/src/lib/http-api.ts`; the browser adapter selects the local engine. See [the preserved full-stack README](README.fullstack.md), [architecture audit](docs/platform/audit.md), and [server deployment guide](docs/platform/deployment.md).
 
-- **Dashboard:** actual document, indexed-passage, and completed-quiz counts; recent notes and activity.
-- **My Notes:** PDF/TXT/Markdown upload, duplicate detection, samples, filename search, format filters, layouts, source preview, and deletion.
-- **Ask PadhAI:** real local embeddings and Chroma retrieval; original passages with document/page references; optional evidence-checked AI answers.
-- **Quiz Mode:** server-generated 5/10/20-question quizzes, difficulty selection, private answers until submission, grading, source-backed explanations, and retakes.
-- **Settings:** workspace preferences, light/dark/system appearance, explicit AI consent, expiry/storage information, note clearing, and workspace reset.
-- Responsive navigation, keyboard access, loading/error/empty states, and locally hosted fonts. No invented AI answers, user metrics, login forms, or billing features.
+## Run the browser edition
 
-Semantic search needs **no paid API key**. It returns relevant passages, not generated prose. Answers and quizzes require optional server-side OpenAI configuration and workspace consent; unavailable generation has an explicit UI state.
-
-## Run the integrated app
-
-Use Python 3.11/3.12 and Node 22.13+ (Node 24 recommended). Linux is the deployment target; macOS supports the parser's POSIX resource limits. Windows users should use WSL2 or Docker.
+Use Node **22.13+ or 24**:
 
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate
-python -m pip install --upgrade pip
-# Linux CPU-only installation; on macOS, skip this line and let pip resolve PyTorch.
-python -m pip install 'torch>=2.6,<3' --index-url https://download.pytorch.org/whl/cpu
-python -m pip install -r requirements-dev.txt
+git switch feat/browser-only-padhai
 npm --prefix frontend ci
-python -m uvicorn api.main:app --host 127.0.0.1 --port 8000 --no-access-log
-```
-
-In another terminal:
-
-```bash
 npm --prefix frontend run dev
 ```
 
-Open **http://localhost:5173**. Vite forwards `/api` to FastAPI on port 8000. Default allowed origins are exactly `http://localhost:5173` and `http://127.0.0.1:5173`. The landing page does not create a workspace until you open the app.
+Open the URL printed by Vite. The first build downloads public, pinned model artifacts and checks their SHA256 hashes. Runtime assets are generated into ignored directories; user documents never enter a build. The `.npmrc` skips the unused native CUDA download; inference uses WebAssembly.
 
-The first index build downloads the pinned `sentence-transformers/all-MiniLM-L6-v2` model; subsequent searches use the cached local model. The Docker image downloads it during its build and uses offline model loading at runtime.
+1. Open your workspace and add a readable PDF, TXT, or Markdown file, or choose a public sample.
+2. Build the search index. The browser downloads approximately **45 MB** of quantized model/runtime files on first use. The model is cached separately from notes.
+3. Search in your own words. Results are original passages with source references; they are not generated answers.
+4. Open a source, change PDF pages, filter your library, or delete notes.
+5. Refresh: notes, preferences, and the completed index remain in this browser.
 
-No credentials are needed for the keyless flow. To use server settings from a file, copy [deployment/platform/.env.example](deployment/platform/.env.example) to a private file such as `api.env` **outside the repository**, and start Uvicorn with `--env-file /absolute/path/to/api.env`. API-specific settings are process environment variables; the existing root `.env` continues to supply the shared core's optional provider settings. Never commit real keys or put them in `VITE_*` variables.
+The MiniLM model is English-focused. Other languages can be imported, but retrieval quality is not guaranteed. OCR, image understanding, encrypted PDFs, and cloud synchronization are not included. Quizzes and answer generation explain why they are unavailable. No button calls a paid provider.
 
-## Try a complete study session
+## Local storage and privacy
 
-1. Open Dashboard → **Try sample notes**, or upload `sample_data/dbms_notes.pdf` and `sample_data/cloud_computing.txt` in My Notes.
-2. Build the search index. Open Ask PadhAI and ask **“How does database normalization reduce redundancy?”**
-3. Open **View source** on the PDF result. Read page 1 and navigate to page 2.
-4. Ask **“What is IaaS in cloud computing?”** and inspect the text-note evidence.
-5. When optional AI is enabled, give consent in Settings and generate an answer or quiz. Submitted quiz answers and explanations come from the backend; retakes make no new provider request.
-6. Delete a note or clear the workspace and verify the old results disappear.
+Extracted page text, filenames, preferences, activity, and normalized vectors are stored in **IndexedDB** under this site's origin. Original uploaded file bytes are discarded after processing. Heavy PDF parsing and model inference run in workers. Search uses the real pinned `Xenova/all-MiniLM-L6-v2` Q8 model, 384-dimensional vectors, cosine similarity, and token-safe weighted windows rather than truncating long passages.
 
-See the [portfolio demo guide](docs/platform/demo-guide.md) for a short presentation and honest talking points.
+Notes and questions are not sent to a server. Model/runtime files and selected public samples are requested from the same Netlify origin. The host receives ordinary static-file requests, such as IP addresses; that is separate from document content. The build may download public model weights from Hugging Face, but the deployed browser does not contact Hugging Face or an AI API.
 
-## Architecture
+Anyone with access to this browser profile can access its notes. Storage is not password-protected or end-to-end encrypted. Browser eviction, clearing site data, private browsing, or using another device/origin can lose access. Keep your originals; this is not a backup system. The app has no fixed 24-hour expiry in browser mode. A loaded app/model can search without a network connection, but reopening the whole website offline is not guaranteed.
 
-```mermaid
-flowchart LR
-    Browser[React on Netlify] -->|same-origin /api, HttpOnly cookie + CSRF| Proxy[Netlify reverse proxy]
-    Proxy -->|HTTPS| API[FastAPI: one Python instance]
-    API --> Parser[Resource-bounded parser subprocess]
-    Parser --> Core[Existing page-aware chunking]
-    Core --> Model[Local pinned MiniLM embeddings]
-    Model --> Chroma[Isolated in-memory Chroma indexes]
-    API --> DB[(SQLite on persistent disk)]
-    API -->|optional, consent + quotas| Provider[OpenAI]
-    Provider --> Validator[Existing schema + citation validation]
-```
+Deleting a note removes its stored text and clears the index. Clearing notes removes all notes, vectors, and activity; resetting also removes preferences. Atomic IndexedDB writes and revision checks prevent an old index or import from restoring deleted material. Other tabs are notified to discard displayed results. Browser and OS forensic erasure is not guaranteed. Public model cache files contain no study material and can be removed through browser site-data controls.
 
-The reusable `src/` pipeline is preserved. The new `api/` layer adds ownership, expiry, durable state, background jobs, quotas, and HTTP contracts. Each index is replaced atomically; changing notes invalidates the index and stale in-flight results. Quiz solutions stay on the server until submission. Polling keeps model builds and generation outside long frontend requests.
+Limits: **10 MiB/file, 20 documents, 50 MiB original-file allowance, 500,000 extracted characters, 1,200 passages, and 200 pages/PDF**. Oversized, unreadable, empty, binary, and unsupported inputs fail with actionable messages. A PDF parser timeout stops its worker. Storage quota errors preserve the prior transaction. Model-load failures leave notes available for retry.
 
-| Location | Purpose |
-| --- | --- |
-| `frontend/` | React pages, shared design system, API client, component/browser tests |
-| `api/` | FastAPI routes, request controls, workspace service, parser worker, SQLite |
-| `src/` | Existing extraction, chunking, embeddings, retrieval, answer/quiz validation |
-| `tests/api/` | API isolation, lifecycle, limits, scoring and concurrency tests |
-| `deployment/platform/`, `render.yaml`, `netlify.toml` | Container and host configuration |
-| `app.py`, `web/`, `deployment/streamlit/` | Preserved legacy implementation and rollback path |
-| `evaluation/` | Existing fixed retrieval evaluation and recorded results |
+## Deploy to Netlify at ₹0
 
-## Storage, privacy, and limits
-
-This is an **anonymous, temporary personal workspace**, not an account system. An opaque 256-bit HttpOnly cookie grants access; only its hash is stored server-side. There is no recovery after losing the cookie and no cross-device synchronization. Shared browsers share a workspace until reset or expiry.
-
-Original uploads are discarded after parsing. Extracted text, filenames, metadata, jobs, preferences, quizzes, and attempts live in SQLite. Chroma indexes live in memory and need rebuilding after a restart. Notes survive a restart when the disk is persistent. Default expiry is **24 hours from workspace creation**, not sliding activity-based retention.
-
-Deleting a note removes its stored text and filename activity, clears the index and derived quizzes/answers, and prevents in-flight results from being committed. Adding notes preserves existing quizzes because their sources remain unchanged. Clearing notes removes all study material; resetting deletes the whole workspace. Cleanup runs every 30 seconds while the server is running and also on access/startup. SQLite secure-delete and WAL truncation reduce residual database content; they are **not a forensic erasure guarantee** for memory, disk snapshots, host backups, or provider processing already started. The operator controls backup retention and can access server storage.
-
-Defaults: 10 MiB/file, 20 notes/workspace, 50 MiB original-upload allowance/workspace, 2 million extracted characters/workspace, 20 million across the service, 100 workspaces, 5,000 chunks/workspace, and eight queued/running jobs. PDF parsing has CPU, memory, output, and time limits. It is a subprocess with a minimal environment, **not a full OS security sandbox**. Request rates, body sizes, concurrency, exact origins, CSRF, and ownership are checked server-side. See [security and operations](docs/platform/security.md).
-
-## Hosting and optional AI
-
-Use **Netlify for the frontend** and a **Render Docker web service with at least 2 GB RAM and a persistent disk** for FastAPI. `render.yaml` describes a single 1 CPU / 2 GB (`1c-2g`) instance and 1 GB disk; review Render's current price before provisioning. A comparable single-instance container host with persistent storage also works.
-
-[Review the Render backend setup](https://render.com/deploy?repo=https%3A%2F%2Fgithub.com%2Fishanwork43-bit%2FpadhAI%2Ftree%2Ffeat%2Fintegrated-platform) for this implementation branch. As of November 14, 2026, [Render's listed prices](https://render.com/pricing) are **US$25/month for compute + US$0.25/month for the 1 GB disk**, before taxes, usage overages, or workspace charges. Creating the service starts a paid subscription; opening the setup link does not provision it. The Blueprint preconfigures the existing Netlify production origin and the planned `platform-preview` alias, with paid AI disabled. For a fork, update those origins before deployment.
-
-Set Netlify's public `PADHAI_API_ORIGIN` to the actual backend HTTPS origin. The build writes a reverse proxy rule before the SPA fallback and fails if that setting is missing or unsafe. Set backend `API_ALLOWED_ORIGINS` to the exact preview/production frontend origins, never `*`. Production uses a Secure `__Host-` cookie. The browser talks only to its Netlify origin; backend and frontend remain separate infrastructure behind one user-facing site.
-
-Optional AI needs **both** `ENABLE_PAID_AI=true` and backend-only `OPENAI_API_KEY`, followed by workspace consent. Default limits are five generation requests/workspace and 50/service/day, counted durably before calling the provider, including failures. Requests contain selected excerpts, filenames, and the question/settings. The shared core asks the provider for `store=False`; provider policies still apply. No secrets appear in frontend source, configuration, build output, or API responses.
-
-Follow the [step-by-step deployment and safe cutover guide](docs/platform/deployment.md). Do not promote the replacement until the hosted preview passes the complete workflow. Keep the current Streamlit deployment available for rollback.
-
-## Verification
+The root `netlify.toml` builds `frontend/` in **browser** mode. No backend environment variable or API key is required. All files, including the pinned model and WebAssembly runtime, are static. Only a same-origin SPA rewrite is generated; there is no Streamlit redirect or API proxy in browser mode.
 
 ```bash
-python -m pytest -q                  # preserved core/legacy + new API tests
-npm --prefix frontend test          # React and API-client tests
+npm --prefix frontend run build:netlify
+netlify deploy --site padhai-ishan --dir frontend/dist --alias browser-preview --no-build
+```
+
+This creates a **preview**, not a production replacement. Verify the returned URL with the [browser verification checklist](docs/browser/deployment.md). Keep the existing live deployment until review and verification are complete. No new hosting account or payment method is needed. Stay on Netlify's Free plan and within its included usage; model downloads consume bandwidth/credits. Do not enable paid add-ons or automatic upgrades to avoid a usage pause.
+
+After verification and approval for production, publish the same tested build:
+
+```bash
+netlify deploy --site padhai-ishan --dir frontend/dist --prod --no-build
+```
+
+Preview and production have **different IndexedDB origins**. Notes imported into a preview are not automatically transferred to production; reimport original files on the production address. Retain the previous Netlify deploy for rollback.
+
+## Return to FastAPI later
+
+The simplest route is to check out **`feat/integrated-platform`** and follow its [deployment guide](https://github.com/ishanwork43-bit/padhAI/blob/feat/integrated-platform/docs/platform/deployment.md). That branch is unchanged by this browser implementation.
+
+This branch also retains the HTTP adapter. To use its frontend against the existing FastAPI API during development:
+
+```bash
+# Terminal 1, after installing requirements-api.txt in a Python environment
+python -m uvicorn api.main:app --port 8000
+# Terminal 2
+VITE_PADHAI_MODE=server npm --prefix frontend run dev
+```
+
+For a future hosted server build, set `VITE_PADHAI_MODE=server` **for both compilation and hosting generation**, set `PADHAI_API_ORIGIN` to the real backend HTTPS origin, and change the browser setting in `netlify.toml`. Configure the backend's exact frontend origins and persistent storage. Provider secrets belong only on the backend. Test a separate preview before promotion. Local browser notes do not migrate to the server automatically; reimport the originals. See [full-stack deployment](docs/platform/deployment.md) for limits, cookies, optional AI, retention, and rollback.
+
+## Verify
+
+```bash
+npm --prefix frontend test
 npm --prefix frontend run test:hosting
-npm --prefix frontend run build     # TypeScript + Vite production build
-npm --prefix web test               # preserved 0.1.0 landing checks
+npm --prefix frontend run build:netlify
+# With the production preview running on port 4174:
+E2E_URL=http://localhost:4174 npm --prefix frontend run test:e2e
+python -m pytest -q
 ```
 
-With the API and Vite running, install a browser and run the real integration suite:
+Browser integration tests use actual PDF/TXT/Markdown extraction, the real quantized ONNX model, real IndexedDB, and real source previews. They check paraphrased retrieval, PDF page accuracy, refresh persistence, offline search after load, profile isolation, cross-tab deletion, mobile layouts, duplicates, and malformed input. The existing server/quiz/client tests remain; use `E2E_MODE=server` for the preserved full-stack browser suite. Current execution evidence is recorded in [browser verification](docs/browser/verification.md).
 
-```bash
-cd frontend
-npx playwright install chromium
-npm run test:e2e
-```
-
-`CHROMIUM_PATH=/usr/bin/chromium` selects an existing system browser. Browser tests use actual uploads, parsing, MiniLM embeddings, and Chroma. Provider generation is exercised with controlled fixtures and the existing transport/validation tests; **live paid OpenAI calls are not claimed as verified**. See the [verification record](docs/platform/verification.md).
-
-The existing small retrieval evaluation remains available at [docs/retrieval-results.md](docs/retrieval-results.md). Its recorded results describe that fixed dataset, not general model accuracy.
-
-## Legacy and release artifacts
-
-The previous Streamlit entry point still runs with `python -m streamlit run app.py`. The old deployment and demo instructions are retained under `docs/deployment.md` and `docs/demo-guide.md` for rollback. The `v0.1.0` tag and release remain unchanged.
-
-Build a source-only archive from the reviewed allowlist with `python scripts/build_release.py --output-dir dist`. Generated assets, dependencies, databases, private notes, and credentials are excluded. New platform sources are versioned as 0.2.0; no production release is implied until the deployment gate is completed.
-
-[MIT License](LICENSE)
+[Third-party model/runtime notices](frontend/public/licenses/THIRD_PARTY.md) · [Project license](LICENSE)

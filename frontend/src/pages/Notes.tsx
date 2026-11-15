@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { BROWSER_MODE } from '../lib/mode';
 import { useOutletContext } from 'react-router-dom';
 import { Grid2X2, Library, List, Plus, Search, SearchX, Trash2, X } from 'lucide-react';
 import { useStudy } from '../lib/study';
@@ -42,7 +43,11 @@ export function Notes() {
       await jsonRequest(`/documents/${deleting.id}`, 'DELETE');
       await invalidateNotes();
       setDeleting(null);
-      toast('Document deleted. Your index and quizzes have been cleared.');
+      toast(
+        BROWSER_MODE
+          ? 'Document deleted. Rebuild the index to search your remaining notes.'
+          : 'Document deleted. Your index and quizzes have been cleared.',
+      );
     } catch (reason) {
       setError(errorMessage(reason));
     } finally {
@@ -172,7 +177,9 @@ export function Notes() {
               {notes.length} of {workspace.documents.length} notes shown
             </span>
             <span>
-              Adding notes keeps your existing quizzes. Deleting notes clears derived study results.
+              {BROWSER_MODE
+                ? 'Adding or deleting notes clears the search index. Rebuild it to search your current library.'
+                : 'Adding notes keeps your existing quizzes. Deleting notes clears derived study results.'}
             </span>
           </div>
         </>
@@ -191,8 +198,9 @@ export function Notes() {
             <strong>{deleting?.filename}</strong>
           </div>
           <p>
-            Your search index and generated quizzes will also be cleared so they cannot retain
-            deleted material. Your other notes stay in the library.
+            {BROWSER_MODE
+              ? 'Your search index will also be cleared so it cannot retain deleted material. Your other notes stay in the library.'
+              : 'Your search index and generated quizzes will also be cleared so they cannot retain deleted material. Your other notes stay in the library.'}
           </p>
           {error && <ErrorNotice message={error} />}
         </div>

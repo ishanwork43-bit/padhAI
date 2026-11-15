@@ -11,10 +11,12 @@ export default defineConfig({
     proxy: { '/api': { target: 'http://127.0.0.1:8000', changeOrigin: false } },
   },
   build: { sourcemap: false },
+  worker: { format: 'es' },
   test: {
     environment: 'jsdom',
     setupFiles: './src/test-setup.ts',
     include: ['src/**/*.test.{ts,tsx}'],
     restoreMocks: true,
+    env: { VITE_PADHAI_MODE: 'server' },
   },
 });

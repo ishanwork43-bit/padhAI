@@ -54,6 +54,9 @@ jobs:
     env:
       ENABLE_PAID_AI: "false"
       OPENAI_API_KEY: ""
+      VITE_PADHAI_MODE: "server"
+      E2E_MODE: "server"
+      ONNXRUNTIME_NODE_INSTALL_CUDA: "skip"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -115,3 +118,45 @@ jobs:
       - name: Container diagnostics
         if: failure()
         run: docker logs padhai-api
+  browser-only:
+    runs-on: ubuntu-latest
+    env:
+      VITE_PADHAI_MODE: "browser"
+      ONNXRUNTIME_NODE_INSTALL_CUDA: "skip"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - uses: actions/cache@v4
+        with:
+          path: frontend/public/models
+          key: browser-minilm-751bff37182d3f1213fa05d7196b954e230abad9-q8
+      - run: npm ci
+        working-directory: frontend
+      - run: npx playwright install --with-deps chromium
+        working-directory: frontend
+      - run: npm run build:netlify
+        working-directory: frontend
+      - name: Start static browser preview
+        run: |
+          npm --prefix frontend run preview -- --port 4174 --strictPort > /tmp/padhai-browser.log 2>&1 &
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent --output /dev/null http://localhost:4174; then
+              exit 0
+            fi
+            sleep 1
+          done
+          exit 1
+      - run: npm run test:e2e
+        working-directory: frontend
+        env:
+          E2E_URL: http://localhost:4174
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: browser-only-diagnostics
+          path: frontend/test-results
+          retention-days: 3

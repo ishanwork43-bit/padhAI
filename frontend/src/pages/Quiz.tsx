@@ -1,3 +1,4 @@
+import { BROWSER_MODE } from '../lib/mode';
 import { useEffect, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
@@ -31,6 +32,33 @@ import { CitationLinks } from './Ask';
 import { date } from '../lib/format';
 
 export function Quiz() {
+  if (BROWSER_MODE)
+    return (
+      <div className="page-enter quiz-page">
+        <SectionHeading
+          eyebrow="PRACTICE WITH PURPOSE"
+          title="A little practice. A lot of clarity."
+          description="Quiz Mode belongs to the full study platform."
+        />
+        <div className="surface">
+          <EmptyState
+            icon={<ListChecks size={34} />}
+            title="AI quizzes are temporarily unavailable."
+            description="This browser edition runs on your device and has no AI generation service. You can search your notes and explore their sources now. Generated quizzes and answers need the hosted backend."
+          >
+            <ButtonLink to="/ask">
+              Search your notes <ArrowRight size={16} />
+            </ButtonLink>
+            <ButtonLink to="/notes" variant="secondary">
+              Open My Notes
+            </ButtonLink>
+          </EmptyState>
+        </div>
+      </div>
+    );
+  return <ServerQuiz />;
+}
+function ServerQuiz() {
   const { workspace, startJob, job, refresh } = useStudy(),
     [params, setParams] = useSearchParams(),
     client = useQueryClient();

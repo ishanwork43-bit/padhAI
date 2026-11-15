@@ -1,3 +1,4 @@
+import { BROWSER_MODE } from '../lib/mode';
 import { useEffect, useRef, useState } from 'react';
 import { Check, FileText, LoaderCircle, Plus, UploadCloud, X, AlertCircle } from 'lucide-react';
 import { Modal, Button, ErrorNotice } from './ui';
@@ -172,8 +173,9 @@ export function UploadDialog({ open, onClose }: { open: boolean; onClose: () => 
           </ul>
         )}
         <p className="privacy-note">
-          Your extracted notes stay in this workspace until its expiry. You can delete them at any
-          time. Original files are discarded after processing.
+          {BROWSER_MODE
+            ? 'Your files are processed on this device. Extracted text and the search index are saved in this browser, with no uploads to a server. Keep your original files; clearing site data removes your notes.'
+            : 'Your extracted notes stay in this workspace until its expiry. You can delete them at any time. Original files are discarded after processing.'}
         </p>
       </div>
       <div className="modal-footer">

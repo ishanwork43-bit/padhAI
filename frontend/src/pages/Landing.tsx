@@ -1,3 +1,4 @@
+import { BROWSER_MODE } from '../lib/mode';
 import {
   ArrowDown,
   ArrowRight,
@@ -111,13 +112,13 @@ export function Landing() {
                 <ArrowUpRight size={18} />
               </span>
             </Link>
-            <Link to="/quiz" className="art-quiz">
+            <Link to={BROWSER_MODE ? '/settings#data' : '/quiz'} className="art-quiz">
               <span className="quiz-art-icon">
                 <ListChecks size={22} />
               </span>
               <div>
-                <span>03 / PRACTICE</span>
-                <strong>Make it stick.</strong>
+                <span>{BROWSER_MODE ? '03 / YOUR DEVICE' : '03 / PRACTICE'}</span>
+                <strong>{BROWSER_MODE ? 'Keep it close.' : 'Make it stick.'}</strong>
               </div>
               <ArrowUpRight size={18} />
             </Link>
@@ -175,10 +176,12 @@ export function Landing() {
               {
                 n: '03',
                 icon: ListChecks,
-                title: 'Put ideas into practice.',
-                body: 'When optional AI is enabled, turn your notes into quizzes with explanations and source quotes.',
-                to: '/quiz',
-                cta: 'Explore Quiz Mode',
+                title: BROWSER_MODE ? 'Your notes. Your device.' : 'Put ideas into practice.',
+                body: BROWSER_MODE
+                  ? 'Your library and search index stay in this browser after refresh. No account, API key, or upload to a server.'
+                  : 'When optional AI is enabled, turn your notes into quizzes with explanations and source quotes.',
+                to: BROWSER_MODE ? '/settings#data' : '/quiz',
+                cta: BROWSER_MODE ? 'Understand local storage' : 'Explore Quiz Mode',
               },
             ].map(({ n, icon: Icon, title, body, to, cta }) => (
               <article key={n}>
@@ -205,8 +208,9 @@ export function Landing() {
               Clearer thinking.
             </h2>
             <p>
-              Keyless semantic search is at the heart of PadhAI. Optional AI adds generation, with
-              your choice and your sources kept in view.
+              {BROWSER_MODE
+                ? 'Real semantic search, right on your device. Read the evidence, follow PDF page references, and keep your study material in your browser.'
+                : 'Keyless semantic search is at the heart of PadhAI. Optional AI adds generation, with your choice and your sources kept in view.'}
             </p>
             <ButtonLink to="/dashboard" variant="secondary">
               Make space for learning
@@ -228,8 +232,9 @@ export function Landing() {
               <div>
                 <h3>A workspace with boundaries</h3>
                 <p>
-                  A private browser session, limited retention, and controls to delete your notes at
-                  any time.
+                  {BROWSER_MODE
+                    ? 'Notes stay in this browser. Delete them any time. Clearing site data or using another device starts a separate library.'
+                    : 'A private browser session, limited retention, and controls to delete your notes at any time.'}
                 </p>
               </div>
             </article>
@@ -238,8 +243,9 @@ export function Landing() {
               <div>
                 <h3>Honest about what’s possible</h3>
                 <p>
-                  Search works without a paid key. AI generation is clearly optional, and missing
-                  evidence stays missing.
+                  {BROWSER_MODE
+                    ? 'Search works without a paid key. Generated answers and quizzes are clearly unavailable in this edition; source passages are always real.'
+                    : 'Search works without a paid key. AI generation is clearly optional, and missing evidence stays missing.'}
                 </p>
               </div>
             </article>

@@ -26,11 +26,16 @@ export function proxyRules(value) {
   }
   return `/api/*  ${url.origin}/api/:splat  200!\n/*  /index.html  200\n`;
 }
+export function hostingRules(mode, origin) {
+  if (mode === undefined || mode === '' || mode === 'browser') return '/*  /index.html  200\n';
+  if (mode === 'server') return proxyRules(origin);
+  throw new Error('VITE_PADHAI_MODE must be browser or server.');
+}
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
   try {
     writeFileSync(
       new URL('../dist/_redirects', import.meta.url),
-      proxyRules(process.env.PADHAI_API_ORIGIN),
+      hostingRules(process.env.VITE_PADHAI_MODE, process.env.PADHAI_API_ORIGIN),
     );
   } catch (error) {
     console.error(error.message);

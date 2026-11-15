@@ -1,3 +1,4 @@
+import { BROWSER_MODE } from '../lib/mode';
 import { useEffect, useRef, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import {
@@ -149,7 +150,9 @@ export function Ask() {
                 <p>
                   Build a semantic index for your {workspace.stats.documents}{' '}
                   {workspace.stats.documents === 1 ? 'document' : 'documents'}. The first build can
-                  take a little longer while the model loads.
+                  take a little longer while the model loads.{' '}
+                  {BROWSER_MODE &&
+                    'The search model and runtime download once (about 45 MB). Text stays on your device; indexing continues while you use this tab.'}
                 </p>
               </div>
               <Button
@@ -311,7 +314,9 @@ export function Ask() {
                         <h3>Bring the evidence together.</h3>
                         <p>
                           {!workspace.capabilities.ai_available
-                            ? 'AI summaries are not enabled on this server. Your semantic search works without an API key.'
+                            ? BROWSER_MODE
+                              ? 'Generated answers are unavailable in this browser edition. These are real passages from your notes, found by local semantic search.'
+                              : 'AI summaries are not enabled on this server. Your semantic search works without an API key.'
                             : !workspace.settings.ai_consent
                               ? 'Choose whether to share relevant excerpts with the AI provider in Settings.'
                               : !workspace.capabilities.ai_requests_remaining

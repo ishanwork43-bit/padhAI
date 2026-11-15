@@ -1,3 +1,4 @@
+import { BROWSER_MODE } from './mode';
 import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -233,7 +234,11 @@ export function StudyProvider({ children }: { children: ReactNode }) {
         <div className="connection-card">
           <WifiOff size={34} />
           <h1>Let's reconnect your study space.</h1>
-          <p>Your workspace needs a connection to the study service.</p>
+          <p>
+            {BROWSER_MODE
+              ? 'Allow site storage and use a recent browser. Your saved notes remain on this device.'
+              : 'Your workspace needs a connection to the study service.'}
+          </p>
           <ErrorNotice message={errorMessage(workspaceQuery.error)} />
           <Button busy={workspaceQuery.isFetching} onClick={() => void workspaceQuery.refetch()}>
             Try again

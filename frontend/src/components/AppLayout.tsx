@@ -1,3 +1,4 @@
+import { BROWSER_MODE } from '../lib/mode';
 import { useEffect, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
@@ -18,6 +19,8 @@ import {
   X,
 } from 'lucide-react';
 import { useStudy } from '../lib/study';
+import { errorMessage, jsonRequest } from '../lib/api';
+import { useToast } from './Toast';
 import { Brand, Button, Modal } from './ui';
 import { SampleDialog, UploadDialog } from './UploadDialog';
 const links = [
@@ -31,7 +34,8 @@ export interface LayoutActions {
   openSamples: () => void;
 }
 export function AppLayout() {
-  const { workspace, job } = useStudy(),
+  const toast = useToast();
+  const { workspace, job, invalidateNotes } = useStudy(),
     location = useLocation(),
     navigate = useNavigate();
   const [upload, setUpload] = useState(false),
@@ -70,7 +74,9 @@ export function AppLayout() {
             <Icon size={19} />
             <span>{label}</span>
             {to === '/notes' && workspace.stats.documents > 0 && (
-              <span className="nav-count">{workspace.stats.documents}</span>
+              <span className="nav-count" aria-hidden="true">
+                {workspace.stats.documents}
+              </span>
             )}
           </NavLink>
         ))}
@@ -96,7 +102,7 @@ export function AppLayout() {
           </span>
           <div>
             <strong>{workspace.name}</strong>
-            <span>Personal study workspace</span>
+            <span>{BROWSER_MODE ? 'Saved on this device' : 'Personal study workspace'}</span>
           </div>
           <Link to="/settings" aria-label="Workspace settings">
             <ChevronRight size={17} />
@@ -167,15 +173,29 @@ export function AppLayout() {
           <div className="job-banner" role="status">
             <LoaderCircle size={17} className="spin" />
             <span>
-              {job.kind === 'index'
-                ? job.phase === 'loading_model'
-                  ? 'Preparing your search model…'
-                  : 'Building your search index…'
-                : job.kind === 'quiz'
-                  ? 'Creating your practice quiz…'
-                  : 'Checking the evidence for your answer…'}
+              {BROWSER_MODE
+                ? job.phase
+                : job.kind === 'index'
+                  ? job.phase === 'loading_model'
+                    ? 'Preparing your search model…'
+                    : 'Building your search index…'
+                  : job.kind === 'quiz'
+                    ? 'Creating your practice quiz…'
+                    : 'Checking the evidence for your answer…'}
             </span>
             <span className="job-hint">You can keep exploring your workspace.</span>
+            {BROWSER_MODE && (
+              <button
+                className="text-action"
+                onClick={() => {
+                  void jsonRequest('/index', 'DELETE')
+                    .then(invalidateNotes)
+                    .catch((error) => toast(errorMessage(error), true));
+                }}
+              >
+                Stop indexing
+              </button>
+            )}
           </div>
         )}
         <main id="main-content" className="workspace-content">
@@ -191,7 +211,9 @@ export function AppLayout() {
         <footer className="app-footer">
           <span>
             <ShieldCheck size={13} />
-            Your notes belong to this workspace.
+            {BROWSER_MODE
+              ? 'Your notes stay on this device.'
+              : 'Your notes belong to this workspace.'}
           </span>
           <Link to="/settings#data">Storage & privacy</Link>
           <span className="footer-tagline">Padhai ka smarter way.</span>
@@ -231,8 +253,9 @@ export function AppLayout() {
             <section>
               <h3>Practice with purpose</h3>
               <p>
-                When AI is enabled, create quizzes from your notes. Explanations appear after you
-                submit. Retakes use the same questions.
+                {BROWSER_MODE
+                  ? 'Explore evidence and revisit your source passages. Generated answers and quizzes are unavailable in this browser edition.'
+                  : 'When AI is enabled, create quizzes from your notes. Explanations appear after you submit. Retakes use the same questions.'}
               </p>
             </section>
           </div>

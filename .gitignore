@@ -24,3 +24,8 @@ node_modules/
 *.tsbuildinfo
 frontend/test-results/
 frontend/playwright-report/
+
+# Reproducible, public browser runtime assets (prepared before build).
+frontend/public/models/
+frontend/public/wasm/
+frontend/public/pdfjs/
