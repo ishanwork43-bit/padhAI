@@ -1,3 +1,5 @@
+> Legacy 0.1.0 reference retained for the current deployment and rollback. See the [integrated platform guide](platform/deployment.md) for the replacement architecture.
+
 # Streamlit Community Cloud + Netlify
 
 PadhAI's Python app runs on **Streamlit Community Cloud**. **Netlify** hosts the

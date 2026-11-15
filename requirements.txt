@@ -1,7 +1,3 @@
-# Phase 5 runtime; OpenAI is optional for answers and required for quizzes.
+# Preserved Streamlit runtime.
+-r requirements-core.txt
 streamlit>=1.41,<2
-python-dotenv>=1.0.1,<2
-PyMuPDF>=1.25,<2
-sentence-transformers>=3.4,<6
-chromadb>=1.0,<2
-openai>=1.66,<3

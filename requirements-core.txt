@@ -1,0 +1,6 @@
+# Shared document, retrieval, and optional generation pipeline.
+python-dotenv>=1.0.1,<2
+PyMuPDF>=1.25,<2
+sentence-transformers>=3.4,<6
+chromadb>=1.0,<2
+openai>=1.66,<3

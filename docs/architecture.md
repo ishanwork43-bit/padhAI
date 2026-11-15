@@ -1,3 +1,5 @@
+> Legacy 0.1.0 reference retained for the current deployment and rollback. See the [integrated platform guide](platform/audit.md) for the replacement architecture.
+
 # Architecture and boundaries
 
 ## Implemented through Phase 6

@@ -1,0 +1,14 @@
+**
+!requirements.txt
+!requirements-core.txt
+!requirements-api.txt
+!src/
+!src/*.py
+!api/
+!api/*.py
+!sample_data/
+!sample_data/dbms_notes.pdf
+!sample_data/cloud_computing.txt
+!deployment/
+!deployment/platform/
+!deployment/platform/Dockerfile

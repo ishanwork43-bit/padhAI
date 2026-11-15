@@ -1,204 +1,104 @@
-# PadhAI
+# PadhAI — Padhai ka smarter way.
 
-**Padhai ka smarter way.** Upload your notes, find relevant passages, and test what you know.
+A polished study workspace for your own notes: **React + Vite + Tailwind**, real semantic search, PDF page references, and source previews. This branch runs entirely in the browser and deploys as static files on Netlify. No Python host, account, API key, or paid inference is needed.
 
-**Version: 0.1.0.** A Python study companion built with Streamlit,
-PyMuPDF, Sentence Transformers, and Chroma. Search runs locally after the first
-embedding-model download. OpenAI answers and quizzes are optional and run only
-when you explicitly request them.
+**[Open the verified Netlify preview](https://browser-preview--padhai-ishan.netlify.app)** · [Implementation PR](https://github.com/ishanwork43-bit/padhAI/pull/2) · [Verification evidence](docs/browser/verification.md)
 
-## What you can do
+![PadhAI browser workspace](docs/browser/screenshots/dashboard.png)
 
-- Upload PDF, UTF-8 TXT, and Markdown notes; inspect extracted text and PDF pages.
-- Search semantically and see original passages, filenames, and page numbers.
-- Request an AI answer with source IDs and exact evidence quotes checked in code.
-- Generate 5, 10, or 20 MCQs at easy, medium, or hard difficulty; submit, score,
-  review explanations, and retake without another generation request.
-- Run deterministic tests and reproduce a small real-model retrieval evaluation.
+## Two architectures, both preserved
 
-Notes and vector indexes are isolated by session and held in memory. Refreshing
-or disconnecting can lose access to them. Local retrieval returns passages; it
-is **not full local AI answer generation**. Quizzes require an OpenAI API key.
+| | Browser edition — this branch | Full-stack platform — preserved |
+| --- | --- | --- |
+| Branch | [`feat/browser-only-padhai`](https://github.com/ishanwork43-bit/padhAI/tree/feat/browser-only-padhai) | [`feat/integrated-platform`](https://github.com/ishanwork43-bit/padhAI/tree/feat/integrated-platform) |
+| Interface | Existing React / Vite / Tailwind design; six pages | Same design with server features |
+| Processing | PDF.js + text decoder in Web Workers | Python extraction in a bounded subprocess |
+| Semantic search | Transformers.js, quantized MiniLM, local cosine ranking | Sentence Transformers, MiniLM, Chroma retrieval |
+| Citations | Original text, exact offsets, PDF page numbers | Validated retrieval and generated-answer citations |
+| Storage | IndexedDB in this browser, including vectors | Owner-isolated SQLite + in-memory Chroma indexes |
+| Generated answers / quizzes | Clearly unavailable; no imitation responses | Existing server-side RAG, citation validation, and quiz scoring |
+| Hosting | Static Netlify Free plan, within its included usage | Netlify + a separately hosted FastAPI service |
+| Keys | None | Optional AI key stays only on the backend |
 
-## Hosted deployment
+**The complete Python implementation is retained.** `api/`, `src/`, legacy Streamlit code, backend tests, and Docker/Render files have not been replaced. The original full-stack frontend HTTP client is preserved in `frontend/src/lib/http-api.ts`; the browser adapter selects the local engine. See [the preserved full-stack README](README.fullstack.md), [architecture audit](docs/platform/audit.md), and [server deployment guide](docs/platform/deployment.md).
 
-Source: [ishanwork43-bit/padhAI](https://github.com/ishanwork43-bit/padhAI).
-The [Netlify landing page](https://padhai-ishan.netlify.app) introduces the project
-and provides public sample notes. Both **Open PadhAI** buttons open the full
-[Streamlit study app](https://padhaistudy.streamlit.app/) in a new tab.
-Uploads, embeddings, and search run on the Streamlit server. The frontend needs
-only the public app URL configured in `netlify.toml`; API keys belong in Streamlit's
-server-side Secrets settings.
-Follow the [deployment guide](docs/deployment.md) for the exact settings.
+## Run the browser edition
 
-## Run locally on your Mac
-
-Install Python 3.11 or 3.12 if needed; Python 3.12 is recommended. Open Terminal
-in the extracted project folder:
+Use Node **22.13+ or 24**:
 
 ```bash
-python3 --version
-python3 -m venv .venv
-source .venv/bin/activate
-python -m pip install --upgrade pip
-python -m pip install -r requirements-dev.txt
+git switch feat/browser-only-padhai
+npm --prefix frontend ci
+npm --prefix frontend run dev
 ```
 
-For a fresh setup, copy the example settings. Keep an existing `.env` when updating:
+Open the URL printed by Vite. The first build downloads public, pinned model artifacts and checks their SHA256 hashes. Runtime assets are generated into ignored directories; user documents never enter a build. The `.npmrc` skips the unused native CUDA download; inference uses WebAssembly.
+
+1. Open your workspace and add a readable PDF, TXT, or Markdown file, or choose a public sample.
+2. Build the search index. The browser downloads approximately **45 MB** of quantized model/runtime files on first use. The model is cached separately from notes.
+3. Search in your own words. Results are original passages with source references; they are not generated answers.
+4. Open a source, change PDF pages, filter your library, or delete notes.
+5. Refresh: notes, preferences, and the completed index remain in this browser.
+
+The MiniLM model is English-focused. Other languages can be imported, but retrieval quality is not guaranteed. OCR, image understanding, encrypted PDFs, and cloud synchronization are not included. Quizzes and answer generation explain why they are unavailable. No button calls a paid provider.
+
+## Local storage and privacy
+
+Extracted page text, filenames, preferences, activity, and normalized vectors are stored in **IndexedDB** under this site's origin. Original uploaded file bytes are discarded after processing. Heavy PDF parsing and model inference run in workers. Search uses the real pinned `Xenova/all-MiniLM-L6-v2` Q8 model, 384-dimensional vectors, cosine similarity, and token-safe weighted windows rather than truncating long passages.
+
+Notes and questions are not sent to a server. Model/runtime files and selected public samples are requested from the same Netlify origin. The host receives ordinary static-file requests, such as IP addresses; that is separate from document content. The build may download public model weights from Hugging Face, but the deployed browser does not contact Hugging Face or an AI API.
+
+Anyone with access to this browser profile can access its notes. Storage is not password-protected or end-to-end encrypted. Browser eviction, clearing site data, private browsing, or using another device/origin can lose access. Keep your originals; this is not a backup system. The app has no fixed 24-hour expiry in browser mode. A loaded app/model can search without a network connection, but reopening the whole website offline is not guaranteed.
+
+Deleting a note removes its stored text and clears the index. Clearing notes removes all notes, vectors, and activity; resetting also removes preferences. Atomic IndexedDB writes and revision checks prevent an old index or import from restoring deleted material. Other tabs are notified to discard displayed results. Browser and OS forensic erasure is not guaranteed. Public model cache files contain no study material and can be removed through browser site-data controls.
+
+Limits: **10 MiB/file, 20 documents, 50 MiB original-file allowance, 500,000 extracted characters, 1,200 passages, and 200 pages/PDF**. Oversized, unreadable, empty, binary, and unsupported inputs fail with actionable messages. A PDF parser timeout stops its worker. Storage quota errors preserve the prior transaction. Model-load failures leave notes available for retry.
+
+## Deploy to Netlify at ₹0
+
+The root `netlify.toml` builds `frontend/` in **browser** mode. No backend environment variable or API key is required. All files, including the pinned model and WebAssembly runtime, are static. Only a same-origin SPA rewrite is generated; there is no Streamlit redirect or API proxy in browser mode.
 
 ```bash
-test -e .env || cp .env.example .env
+npm --prefix frontend run build:netlify
+netlify deploy --site padhai-ishan --dir frontend/dist --alias browser-preview --no-build
+```
+
+This creates a **preview**, not a production replacement. Verify the returned URL with the [browser verification checklist](docs/browser/deployment.md). Keep the existing live deployment until review and verification are complete. No new hosting account or payment method is needed. Stay on Netlify's Free plan and within its included usage; model downloads consume bandwidth/credits. Do not enable paid add-ons or automatic upgrades to avoid a usage pause.
+
+After verification and approval for production, publish the same tested build:
+
+```bash
+netlify deploy --site padhai-ishan --dir frontend/dist --prod --no-build
+```
+
+Preview and production have **different IndexedDB origins**. Notes imported into a preview are not automatically transferred to production; reimport original files on the production address. Retain the previous Netlify deploy for rollback.
+
+## Return to FastAPI later
+
+The simplest route is to check out **`feat/integrated-platform`** and follow its [deployment guide](https://github.com/ishanwork43-bit/padhAI/blob/feat/integrated-platform/docs/platform/deployment.md). That branch is unchanged by this browser implementation.
+
+This branch also retains the HTTP adapter. To use its frontend against the existing FastAPI API during development:
+
+```bash
+# Terminal 1, after installing requirements-api.txt in a Python environment
+python -m uvicorn api.main:app --port 8000
+# Terminal 2
+VITE_PADHAI_MODE=server npm --prefix frontend run dev
+```
+
+For a future hosted server build, set `VITE_PADHAI_MODE=server` **for both compilation and hosting generation**, set `PADHAI_API_ORIGIN` to the real backend HTTPS origin, and change the browser setting in `netlify.toml`. Configure the backend's exact frontend origins and persistent storage. Provider secrets belong only on the backend. Test a separate preview before promotion. Local browser notes do not migrate to the server automatically; reimport the originals. See [full-stack deployment](docs/platform/deployment.md) for limits, cookies, optional AI, retention, and rollback.
+
+## Verify
+
+```bash
+npm --prefix frontend test
+npm --prefix frontend run test:hosting
+npm --prefix frontend run build:netlify
+# With the production preview running on port 4174:
+E2E_URL=http://localhost:4174 npm --prefix frontend run test:e2e
 python -m pytest -q
-python -m streamlit run app.py
 ```
 
-Open Streamlit's printed Local URL, usually `http://localhost:8501`. Stop with
-Control-C. Activate `.venv` again in each new terminal. Run commands from the
-project root so Streamlit loads its theme. If `python3` is older than 3.11, use
-`python3.12` to create the virtual environment. The Mac instructions have not been
-executed on a Mac; verification was performed on Linux.
+Browser integration tests use actual PDF/TXT/Markdown extraction, the real quantized ONNX model, real IndexedDB, and real source previews. They check paraphrased retrieval, PDF page accuracy, refresh persistence, offline search after load, profile isolation, cross-tab deletion, mobile layouts, duplicates, and malformed input. The existing server/quiz/client tests remain; use `E2E_MODE=server` for the preserved full-stack browser suite. Current execution evidence is recorded in [browser verification](docs/browser/verification.md).
 
-For **Linux CPU-only** setup, install CPU PyTorch before the project requirements:
-
-```bash
-python -m pip install "torch>=2.6,<3" --index-url https://download.pytorch.org/whl/cpu
-python -m pip install -r requirements-dev.txt
-```
-
-## Try the keyless demo
-
-1. In **My Notes**, upload `sample_data/dbms_notes.pdf` and
-   `sample_data/cloud_computing.txt`, then click **Process selected files**.
-2. In **Ask PadhAI**, click **Build search index**. First use downloads the pinned
-   `sentence-transformers/all-MiniLM-L6-v2` model from Hugging Face.
-3. Ask **“What reduces redundancy in relational tables?”** and inspect the PDF
-   passage and page number. Then try **“Who manages the operating system in IaaS?”**
-4. Add or remove a document and rebuild to search the updated notes.
-
-For a short presentation, follow the [demo guide](docs/demo-guide.md).
-
-## Optional AI answers and quizzes
-
-Set `OPENAI_API_KEY` in your local `.env` using a text editor and restart the app.
-Keep `OPENAI_MODEL=gpt-4o-mini` initially. Search remains local. Clicking
-**Generate AI answer** sends the submitted question and selected excerpts to
-OpenAI; **Generate quiz** sends selected excerpts and quiz settings. These actions
-may incur API charges. Excerpts may include personal information or the full text
-of a short document. The app does not attach original files or send conversation
-history. `store=False` is requested; provider data policies still apply.
-
-Quiz Mode uses extracted notes directly, so it needs no search index. Correct
-answers and evidence appear after submission. Unanswered items count as incorrect.
-Retaking uses the same questions with no new API request. Changing notes or quiz
-settings resets the quiz. Submit before leaving the page; unsubmitted choices
-may be lost.
-
-Missing keys, insufficient material, request errors, and invalid generated output
-have explicit UI states. The app never substitutes an invented local quiz.
-
-## Verification and retrieval results
-
-See [verification](docs/verification.md) for executed checks and their limits.
-**523 automated tests passed locally.** Tests cover extraction, chunking, source mapping, session isolation, index failure
-handling, strict answer/quiz validation, scoring, UI state, and evaluation math.
-OpenAI SDK calls were tested with simulated HTTP responses; **live OpenAI answer
-and quiz generation have not been tested**.
-
-The fixed evaluation has **8 documents, 18 answerable questions, and 2 unanswerable
-questions**. It was frozen before the real-model run:
-
-| K (unique documents) | Hit@K | Macro Recall@K |
-| --- | --- | --- |
-| 1 | 100.0% | 94.4% |
-| 3 | 100.0% | 100.0% |
-| 5 | 100.0% | 100.0% |
-
-Neither negative query returned a passage at threshold 0.25 (**0/2 false positives**).
-This is a small hand-authored learning dataset, not a held-out benchmark or a
-claim of general accuracy. See [the report](docs/retrieval-results.md) and
-[per-query results](evaluation/results.json).
-
-```bash
-python -m evaluation.run_retrieval --output evaluation/results.json
-```
-
-After caching the model, prefix that command with `HF_HUB_OFFLINE=1` to verify
-offline operation. The runner records dataset hash, model revision, runtime
-versions, and retrieval settings. See [evaluation instructions](evaluation/README.md).
-
-## How it works
-
-```text
-Upload → validate/extract → page-aware chunks → local embeddings → Chroma search
-                                                        ↓
-                          retrieved passages → optional AI answer → checked quotes
-
-Extracted chunks → optional AI quiz → structure/evidence validation → scoring
-```
-
-| File or directory | Purpose |
-| --- | --- |
-| `app.py` | Streamlit navigation and session state |
-| `src/document_loader.py`, `src/chunker.py` | Validated text and traceable chunks |
-| `src/embeddings.py`, `src/vector_store.py`, `src/retriever.py` | Local retrieval |
-| `src/answer_generator.py`, `src/quiz_generator.py` | Optional generation, validation, scoring |
-| `src/config.py` | Environment settings |
-| `tests/`, `evaluation/` | Automated behavior checks and retrieval measurements |
-| `sample_data/` | Public example notes |
-
-Read the [architecture](docs/architecture.md) for limits and design choices, and
-the [learning guide](docs/learning-guide.md) for each module's Python concepts,
-connections, tests, and exercises.
-
-## Settings and limitations
-
-| Setting | Default | Meaning |
-| --- | --- | --- |
-| `OPENAI_API_KEY` | empty | Optional API key; keep it out of Git |
-| `OPENAI_MODEL` | `gpt-4o-mini` | Must support strict JSON-schema Chat Completions |
-| `MAX_UPLOAD_MB` | `10` | Accepted per-file limit in MiB, integer 1–50 |
-
-Environment variables override `.env`, including blank values. Accepted notes are
-limited to 20 documents / 50 MiB / 2 million extracted characters per session.
-Each PDF is limited to 300 pages; each document to 1 million extracted characters.
-The architecture documentation lists all other processing and generation limits.
-
-- Scanned PDFs need OCR elsewhere; encrypted or damaged PDFs are rejected.
-- PDF reading order and tables may extract imperfectly. The embedding model works
-  best with English; Hindi/Hinglish retrieval is not generally validated.
-- Similarity measures relatedness, not answer support. Source/quote checks verify
-  existence, not logical entailment, correct quiz answers, or unambiguous distractors.
-- The app has no authenticated accounts or persistent notes. Disconnected Chroma
-  collections may remain in server memory until shutdown; native PDF parsing has
-  no hard resource sandbox. This is a learning MVP, not a production-secure service.
-- Dependencies use version ranges; the embedding revision is pinned and tested
-  dependency versions are recorded in the verification/evaluation artifacts.
-
-If a port is occupied, use `--server.port 8502`. For a failed model download, check
-connectivity/disk space and retry indexing. An AI error leaves local passages
-available; a rejected quiz is never partially displayed. See the demo guide for
-a presentation fallback and the architecture for future improvements.
-
-## Release and contribution workflow
-
-Version: [VERSION](VERSION). Changes: [CHANGELOG](CHANGELOG.md).
-Follow the [release guide](docs/release-guide.md) to prepare your own repository,
-review files, run checks, tag `v0.1.0`, and publish when ready. The source and `v0.1.0` tag are on GitHub. The original v0.1.0 ZIP contains the
-Python MVP; the later hosting files are available on the `main` branch.
-
-```bash
-python scripts/build_release.py --output-dir dist
-```
-
-The builder uses [release-files.txt](release-files.txt) as an explicit source
-allowlist and creates a ZIP plus SHA-256 checksum. Update the list deliberately
-when adding public project files. Unlisted local files are not packaged. Before
-contributing, run `python -m pytest -q` and `python -m pip check`.
-
-## License
-
-Project code is MIT; see [LICENSE](LICENSE). Dependencies retain their own
-licenses; PyMuPDF is offered under AGPL/commercial terms. Review those terms for
-your distribution or deployment. Replace the copyright holder if publishing
-under your own name. No EvidenceDesk source was available; PadhAI was built
-as a separate project.
+[Third-party model/runtime notices](frontend/public/licenses/THIRD_PARTY.md) · [Project license](LICENSE)
