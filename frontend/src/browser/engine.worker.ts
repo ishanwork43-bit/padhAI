@@ -4,7 +4,8 @@ import type { LocalData, StoredNote, VectorPassage } from './store';
 import { chunksFor, rankPassages } from './text';
 import { parseFile } from './parser';
 import { embedText, loadModel } from './model';
-import type { Job, Note, Workspace } from '../lib/types';
+import { prepareContext, verifyLocalCitations, publicQuiz, submitQuiz } from './ai-context';
+import type { Job, Note, Workspace, Quiz, StudySummary, AnswerResult } from '../lib/types';
 
 const store = new LocalStore();
 const jobs = new Map<string, Job>();
@@ -27,7 +28,7 @@ async function workspace(): Promise<Workspace> {
     revision: state.revision,
     created_at: state.created_at,
     expires_at: '',
-    settings: { result_limit: state.result_limit, ai_consent: false },
+    settings: { result_limit: state.result_limit, ai_consent: state.ai_consent ?? false },
     capabilities: {
       semantic_search: true,
       ai_available: false,
@@ -45,21 +46,24 @@ async function workspace(): Promise<Workspace> {
       chunks: state.documents.reduce((s, n) => s + n.chunk_count, 0),
       bytes: state.documents.reduce((s, n) => s + n.byte_size, 0),
       characters: state.documents.reduce((s, n) => s + n.character_count, 0),
-      completed_quizzes: 0,
+      completed_quizzes: (state.quizzes ?? []).filter((q) => q.submitted).length,
     },
     index: {
-      status: busy
-        ? 'indexing'
-        : ready(state)
-          ? 'ready'
-          : state.documents.length
-            ? 'not_indexed'
-            : 'empty',
+      status:
+        busy && active?.kind === 'index'
+          ? 'indexing'
+          : ready(state)
+            ? 'ready'
+            : state.documents.length
+              ? 'not_indexed'
+              : 'empty',
       indexed_chunks: ready(state) ? state.index!.passages.length : 0,
     },
     active_job: busy ? active! : null,
     documents: state.documents.map(metadata),
-    quizzes: [],
+    quizzes: (state.quizzes ?? []).map(
+      ({ questions: _questions, answers: _answers, coverage: _coverage, ...quiz }) => quiz,
+    ),
     activity: state.activity,
   };
 }
@@ -165,6 +169,154 @@ async function indexNotes() {
     startingIndex = false;
   }
 }
+async function startAIJob(kind: 'answer' | 'summary' | 'quiz', body: Record<string, unknown>) {
+  if (startingIndex || searching || (active && ['queued', 'running'].includes(active.status)))
+    throw new LocalError('busy', 'Wait for current processing to finish.', 409);
+  startingIndex = true;
+  try {
+    const state = await store.read();
+    if (!state.ai_consent)
+      throw new LocalError(
+        'consent_required',
+        'Allow sharing selected excerpts with Groq in Settings first.',
+        403,
+      );
+    if (typeof body.csrf !== 'string' || !body.csrf)
+      throw new LocalError('locked', 'Unlock private AI in Settings first.', 401);
+    const context = prepareContext(state, kind, body);
+    const job: Job = {
+      id: crypto.randomUUID(),
+      kind,
+      status: 'queued',
+      phase: 'Preparing selected excerpts…',
+      revision: state.revision,
+      result: null,
+      error: null,
+    };
+    active = job;
+    jobs.set(job.id, job);
+    if (jobs.size > 10) jobs.delete(jobs.keys().next().value!);
+    const version = ++generation;
+    void (async () => {
+      try {
+        job.status = 'running';
+        job.phase = `Groq is generating from ${context.sources.length} selected passages…`;
+        let response: Response;
+        try {
+          response = await fetch('/api/ai?action=generate', {
+            method: 'POST',
+            credentials: 'same-origin',
+            cache: 'no-store',
+            headers: { 'Content-Type': 'application/json', 'X-PadhAI-CSRF': String(body.csrf) },
+            body: JSON.stringify({
+              task: kind,
+              request_id: job.id,
+              consent: true,
+              language: body.language ?? 'English',
+              length: kind === 'quiz' ? undefined : (body.length ?? 'short'),
+              question: kind === 'answer' ? body.question : undefined,
+              count: kind === 'quiz' ? body.count : undefined,
+              difficulty: kind === 'quiz' ? body.difficulty : undefined,
+              sources: context.sources.map(
+                ({ document_id, filename, page_number, start_char, end_char, text }) => ({
+                  document_id,
+                  filename,
+                  page_number,
+                  start_char,
+                  end_char,
+                  text,
+                }),
+              ),
+            }),
+            signal: AbortSignal.timeout(40000),
+          });
+        } catch {
+          throw new LocalError(
+            'ai_network',
+            'AI could not finish this request. Your local notes are safe. Check the cooldown before retrying.',
+            504,
+          );
+        }
+        const data = await response.json().catch(() => null);
+        if (!response.ok || !data?.result)
+          throw new LocalError(
+            data?.error?.code ?? 'ai_unavailable',
+            data?.error?.message ?? 'AI is temporarily unavailable. Nothing was saved.',
+            response.status,
+            data?.error?.retry_after,
+          );
+        const result = data.result;
+        if (result.mode !== 'generated' && result.mode !== 'insufficient')
+          throw new LocalError('invalid_result', 'The AI result could not be validated.');
+        if (kind !== 'answer' && result.mode === 'insufficient')
+          throw new LocalError('insufficient_evidence', result.message);
+        if (kind === 'quiz') {
+          if (!Array.isArray(result.questions) || result.questions.length !== body.count)
+            throw new LocalError('invalid_quiz', 'The quiz was incomplete. Try fewer questions.');
+          result.questions.forEach((q: Quiz['questions'][number]) =>
+            verifyLocalCitations(q.citations ?? [], context.sources),
+          );
+        } else {
+          if (!Array.isArray(result.claims))
+            throw new LocalError('invalid_answer', 'The answer was incomplete.');
+          result.claims.forEach((c: AnswerResult['claims'][number]) =>
+            verifyLocalCitations(c.citations, context.sources),
+          );
+        }
+        await store.update((current) => {
+          requireVersion(current, state.id, state.revision);
+          if (generation !== version || !current.ai_consent)
+            throw new LocalError(
+              'cancelled',
+              'Notes or sharing preferences changed. The response was discarded.',
+            );
+          if (kind === 'quiz') {
+            const quiz: Quiz = {
+              id: job.id,
+              count: Number(body.count),
+              difficulty: String(body.difficulty),
+              created_at: new Date().toISOString(),
+              attempt_number: 1,
+              submitted: false,
+              score: null,
+              answers: null,
+              can_retake: true,
+              questions: result.questions,
+              coverage: context.coverage,
+            };
+            current.quizzes = [quiz, ...(current.quizzes ?? [])].slice(0, 10);
+            job.result = { quiz_id: quiz.id };
+          } else if (kind === 'summary') {
+            const summary: StudySummary = {
+              id: job.id,
+              created_at: new Date().toISOString(),
+              language: String(body.language ?? 'English'),
+              length: String(body.length ?? 'short'),
+              document_ids: body.document_ids as string[],
+              coverage: context.coverage,
+              mode: result.mode,
+              message: result.message,
+              claims: result.claims,
+            };
+            current.summaries = [summary, ...(current.summaries ?? [])].slice(0, 10);
+            job.result = { summary_id: summary.id };
+          } else
+            job.result = { ...result, question: String(body.question), passages: context.sources };
+          activity(current, kind, `Created an AI ${kind} from selected excerpts`);
+        });
+        job.status = 'completed';
+        job.phase = 'Evidence checked against your local notes';
+      } catch (error) {
+        job.status = 'failed';
+        job.error = safeError(error);
+        job.phase = 'Generation not completed';
+      }
+    })();
+    return job;
+  } finally {
+    startingIndex = false;
+  }
+}
 async function dispatch(path: string, method: string, body: Record<string, unknown> = {}) {
   const url = new URL(path, 'https://padhai.local');
   const route = url.pathname;
@@ -177,14 +329,13 @@ async function dispatch(path: string, method: string, body: Record<string, unkno
         'preferences',
         'Use a workspace name of 1–60 characters and 1–10 results.',
       );
-    if (body.ai_consent)
-      throw new LocalError(
-        'ai_unavailable',
-        'AI generation is unavailable in the browser version.',
-      );
+    if (typeof body.ai_consent !== 'boolean')
+      throw new LocalError('consent', 'Choose whether to share excerpts with Groq.');
     await store.update((state) => {
       state.name = name;
       state.result_limit = count;
+      if (state.ai_consent && !body.ai_consent) generation++;
+      state.ai_consent = body.ai_consent as boolean;
     });
     return workspace();
   }
@@ -226,6 +377,8 @@ async function dispatch(path: string, method: string, body: Record<string, unkno
       state.index = null;
       state.revision++;
       state.activity = [];
+      state.quizzes = [];
+      state.summaries = [];
     });
     return null;
   }
@@ -301,12 +454,60 @@ async function dispatch(path: string, method: string, body: Record<string, unkno
       searching = false;
     }
   }
-  if (route.startsWith('/quizzes') || route === '/answers')
-    throw new LocalError(
-      'ai_unavailable',
-      'Generated answers and quizzes need the FastAPI backend. This browser version provides real semantic search and sources without paid AI.',
-      503,
-    );
+  if (route === '/ai/context' && method === 'POST')
+    return prepareContext(await store.read(), String(body.task), body);
+  if (route === '/answers' && method === 'POST') return startAIJob('answer', body);
+  if (route === '/summaries' && method === 'POST') return startAIJob('summary', body);
+  if (route === '/summaries' && method === 'GET') return (await store.read()).summaries ?? [];
+  if (route.startsWith('/summaries/') && method === 'DELETE') {
+    await store.update((state) => {
+      state.summaries = (state.summaries ?? []).filter((s) => s.id !== route.split('/')[2]);
+    });
+    return null;
+  }
+  if (route === '/quizzes' && method === 'POST') return startAIJob('quiz', body);
+  if (route.startsWith('/quizzes/')) {
+    const id = route.split('/')[2],
+      action = route.split('/')[3];
+    if (method === 'GET' && !action) {
+      const quiz = (await store.read()).quizzes?.find((q) => q.id === id);
+      if (!quiz)
+        throw new LocalError('not_found', 'This quiz no longer exists in your local library.', 404);
+      return publicQuiz(quiz);
+    }
+    return store.update((state) => {
+      const quiz = state.quizzes?.find((q) => q.id === id);
+      if (!quiz)
+        throw new LocalError('not_found', 'This quiz no longer exists in your local library.', 404);
+      if (method === 'POST' && action === 'submit') {
+        if (body.attempt_number !== quiz.attempt_number)
+          throw new LocalError(
+            'stale_attempt',
+            'This quiz was retaken in another tab. Reopen the current attempt.',
+            409,
+          );
+        return submitQuiz(quiz, body.answers);
+      }
+      if (method === 'POST' && action === 'retake') {
+        if (!quiz.submitted)
+          throw new LocalError(
+            'unfinished_quiz',
+            'Finish this attempt before starting a retake.',
+            409,
+          );
+        quiz.attempt_number++;
+        quiz.submitted = false;
+        quiz.answers = null;
+        quiz.score = null;
+        return publicQuiz(quiz);
+      }
+      if (method === 'DELETE' && !action) {
+        state.quizzes = state.quizzes!.filter((q) => q.id !== id);
+        return null;
+      }
+      throw new LocalError('not_found', 'This quiz action is unavailable.', 404);
+    });
+  }
   throw new LocalError('not_found', 'This action is unavailable in the browser version.', 404);
 }
 self.onmessage = async ({ data }) => {

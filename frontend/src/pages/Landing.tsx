@@ -178,7 +178,7 @@ export function Landing() {
                 icon: ListChecks,
                 title: BROWSER_MODE ? 'Your notes. Your device.' : 'Put ideas into practice.',
                 body: BROWSER_MODE
-                  ? 'Your library and search index stay in this browser after refresh. No account, API key, or upload to a server.'
+                  ? 'Your library and search index stay in this browser after refresh. Optional AI shares only reviewed excerpts after your consent.'
                   : 'When optional AI is enabled, turn your notes into quizzes with explanations and source quotes.',
                 to: BROWSER_MODE ? '/settings#data' : '/quiz',
                 cta: BROWSER_MODE ? 'Understand local storage' : 'Explore Quiz Mode',
@@ -244,7 +244,7 @@ export function Landing() {
                 <h3>Honest about what’s possible</h3>
                 <p>
                   {BROWSER_MODE
-                    ? 'Search works without a paid key. Generated answers and quizzes are clearly unavailable in this edition; source passages are always real.'
+                    ? 'Search stays local and keyless. With private access and your consent, Groq can explain selected passages, summarize notes, and create practice quizzes.'
                     : 'Search works without a paid key. AI generation is clearly optional, and missing evidence stays missing.'}
                 </p>
               </div>

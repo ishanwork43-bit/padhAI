@@ -6,6 +6,7 @@ import { Dashboard } from './pages/Dashboard';
 import { Notes } from './pages/Notes';
 import { Ask } from './pages/Ask';
 import { Quiz } from './pages/Quiz';
+import { Summary } from './pages/Summary';
 import { Settings } from './pages/Settings';
 import { Brand, ButtonLink } from './components/ui';
 export function App() {
@@ -18,6 +19,7 @@ export function App() {
           <Route path="notes" element={<Notes />} />
           <Route path="ask" element={<Ask />} />
           <Route path="quiz" element={<Quiz />} />
+          <Route path="summary" element={<Summary />} />
           <Route path="settings" element={<Settings />} />
         </Route>
         <Route

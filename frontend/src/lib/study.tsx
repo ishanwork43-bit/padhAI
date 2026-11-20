@@ -1,4 +1,5 @@
 import { BROWSER_MODE } from './mode';
+import { useAI } from './ai-access';
 import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -14,7 +15,7 @@ interface StudyContextValue {
   refresh: () => Promise<void>;
   invalidateNotes: () => Promise<void>;
   job: Job | undefined;
-  startJob: (kind: 'index' | 'answer' | 'quiz', payload?: unknown) => Promise<void>;
+  startJob: (kind: 'index' | 'answer' | 'quiz' | 'summary', payload?: unknown) => Promise<void>;
   search: SearchResult | null;
   setSearch: (value: SearchResult | null) => void;
   answer: AnswerResult | null;
@@ -29,6 +30,7 @@ export function useStudy() {
 }
 
 export function StudyProvider({ children }: { children: ReactNode }) {
+  const ai = useAI();
   const client = useQueryClient(),
     toast = useToast(),
     navigate = useNavigate(),
@@ -37,8 +39,8 @@ export function StudyProvider({ children }: { children: ReactNode }) {
     [watchedJob, setWatchedJob] = useState<string | null>(null);
   const [search, setSearch] = useState<SearchResult | null>(null),
     [answer, setAnswer] = useState<AnswerResult | null>(null);
-  const [starting, setStarting] = useState<'index' | 'answer' | 'quiz' | null>(null);
-  const inWorkspace = ['/dashboard', '/notes', '/ask', '/quiz', '/settings'].includes(
+  const [starting, setStarting] = useState<'index' | 'answer' | 'quiz' | 'summary' | null>(null);
+  const inWorkspace = ['/dashboard', '/notes', '/ask', '/quiz', '/summary', '/settings'].includes(
     location.pathname,
   );
   const currentPath = useRef(location.pathname);
@@ -54,7 +56,17 @@ export function StudyProvider({ children }: { children: ReactNode }) {
     staleTime: 15000,
     refetchInterval: 30000,
   });
-  const workspace = workspaceQuery.data;
+  const workspace = workspaceQuery.data
+    ? {
+        ...workspaceQuery.data,
+        capabilities: {
+          ...workspaceQuery.data.capabilities,
+          ai_available: !!ai.status?.authenticated && !!ai.status.enabled,
+          ai_requests_remaining: ai.status?.quota?.remaining ?? 0,
+          ai_model: ai.status?.model ?? null,
+        },
+      }
+    : undefined;
   const jobId = watchedJob ?? workspace?.active_job?.id;
   const jobQuery = useQuery({
     queryKey: ['job', jobId],
@@ -73,6 +85,7 @@ export function StudyProvider({ children }: { children: ReactNode }) {
     setWatchedJob(null);
     client.removeQueries({ queryKey: ['quiz'] });
     client.removeQueries({ queryKey: ['preview'] });
+    client.removeQueries({ queryKey: ['summaries'] });
     client.removeQueries({ queryKey: ['job'] });
   };
   const refresh = async () => {
@@ -119,7 +132,9 @@ export function StudyProvider({ children }: { children: ReactNode }) {
     handled.current.add(job.id);
     setWatchedJob(null);
     void refresh();
+    if (job.kind !== 'index') void ai.refresh();
     if (job.status === 'failed') {
+      if (job.kind !== 'index') ai.reportError(job.error?.message ?? 'Generation failed.');
       toast(job.error?.message ?? 'This operation could not finish.', true);
       return;
     }
@@ -139,6 +154,11 @@ export function StudyProvider({ children }: { children: ReactNode }) {
       toast('Your practice quiz is ready.');
       if (currentPath.current === '/quiz') navigate(`/quiz?id=${job.result.quiz_id}`);
     }
+    if (job.kind === 'summary' && job.result && 'summary_id' in job.result) {
+      toast('Your AI summary is ready.');
+      client.invalidateQueries({ queryKey: ['summaries'] });
+      if (currentPath.current === '/summary') navigate(`/summary?id=${job.result.summary_id}`);
+    }
     if (job.kind === 'index') toast('Your notes are ready to search.');
   }, [job, toast, navigate]);
   useEffect(() => {
@@ -150,14 +170,21 @@ export function StudyProvider({ children }: { children: ReactNode }) {
     }
   }, [jobQuery.error]);
 
-  async function startJob(kind: 'index' | 'answer' | 'quiz', payload?: unknown) {
+  async function startJob(kind: 'index' | 'answer' | 'quiz' | 'summary', payload?: unknown) {
     if (starting || (job && ['queued', 'running'].includes(job.status))) return;
     setStarting(kind);
+    if (kind !== 'index') ai.reportError('');
     try {
       const created = await jsonRequest<Job>(
-        kind === 'index' ? '/index' : kind === 'answer' ? '/answers' : '/quizzes',
+        kind === 'index'
+          ? '/index'
+          : kind === 'answer'
+            ? '/answers'
+            : kind === 'summary'
+              ? '/summaries'
+              : '/quizzes',
         'POST',
-        payload,
+        kind === 'index' ? payload : { ...(payload as object), csrf: ai.status?.csrf },
       );
       setWatchedJob(created.id);
       client.setQueryData(['job', created.id], created);

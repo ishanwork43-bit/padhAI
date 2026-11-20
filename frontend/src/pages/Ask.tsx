@@ -1,4 +1,11 @@
 import { BROWSER_MODE } from '../lib/mode';
+import { useAI } from '../lib/ai-access';
+import {
+  AIAvailability,
+  ContextPreview,
+  LanguageChoice,
+  useAIContext,
+} from '../components/AIControls';
 import { useEffect, useRef, useState } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import {
@@ -52,12 +59,20 @@ export function CitationLinks({
 export function Ask() {
   const { workspace, job, startJob, search, setSearch, answer, setAnswer } = useStudy(),
     { openUpload, openSamples } = useOutletContext<LayoutActions>(),
-    toast = useToast();
+    toast = useToast(),
+    ai = useAI();
   const [question, setQuestion] = useState(search?.question ?? ''),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(''),
     [source, setSource] = useState<SourceTarget | null>(null),
-    [copied, setCopied] = useState(false);
+    [copied, setCopied] = useState(false),
+    [language, setLanguage] = useState('English'),
+    [length, setLength] = useState('short');
+  const context = useAIContext(
+    'answer',
+    { passage_ids: search?.passages.map((p) => p.chunk_id) ?? [] },
+    !!search?.passages.length,
+  );
   const owner = useRef(''),
     mounted = useRef(true);
   owner.current = `${workspace.id}:${workspace.revision}`;
@@ -72,7 +87,8 @@ export function Ask() {
   const aiReady =
     workspace.capabilities.ai_available &&
     workspace.settings.ai_consent &&
-    workspace.capabilities.ai_requests_remaining > 0;
+    workspace.capabilities.ai_requests_remaining > 0 &&
+    ai.cooldown === 0;
   async function find() {
     if (!question.trim() || busy) return;
     const version = owner.current;
@@ -182,7 +198,7 @@ export function Ask() {
             <textarea
               id="study-question"
               placeholder="Ask a question, explore a concept, or find an idea in your notes…"
-              maxLength={2000}
+              maxLength={1500}
               rows={3}
               value={question}
               onChange={(event) => setQuestion(event.target.value)}
@@ -195,7 +211,7 @@ export function Ask() {
             />
             <div className="question-footer">
               <span>
-                {question.length ? `${question.length} / 2,000` : 'Your words. Your sources.'}
+                {question.length ? `${question.length} / 1,500` : 'Your words. Your sources.'}
               </span>
               <Button type="submit" busy={busy} disabled={!ready || !question.trim()}>
                 <Search size={17} />
@@ -307,46 +323,48 @@ export function Ask() {
                       </article>
                     ))}
                   </div>
-                  {!answer && (
-                    <div className="ai-upgrade">
-                      <Sparkles size={22} />
-                      <div>
-                        <h3>Bring the evidence together.</h3>
-                        <p>
-                          {!workspace.capabilities.ai_available
-                            ? BROWSER_MODE
-                              ? 'Generated answers are unavailable in this browser edition. These are real passages from your notes, found by local semantic search.'
-                              : 'AI summaries are not enabled on this server. Your semantic search works without an API key.'
-                            : !workspace.settings.ai_consent
-                              ? 'Choose whether to share relevant excerpts with the AI provider in Settings.'
-                              : !workspace.capabilities.ai_requests_remaining
-                                ? 'The AI allowance has been used. You can keep searching your notes.'
-                                : 'Generate a source-checked answer using these notes. This uses one AI request.'}
-                        </p>
-                      </div>
-                      {aiReady ? (
-                        <Button
-                          variant="secondary"
-                          disabled={working || busy}
-                          busy={working && job?.kind === 'answer'}
-                          onClick={() =>
-                            void startJob('answer', {
-                              question: search.question,
-                              limit: workspace.settings.result_limit,
-                            }).catch(() => {})
-                          }
+                  <section className="ai-generation-panel surface">
+                    <h3>
+                      <Sparkles size={19} />
+                      Explain the evidence
+                    </h3>
+                    <div className="ai-options">
+                      <LanguageChoice
+                        id="answer-language"
+                        value={language}
+                        onChange={setLanguage}
+                      />
+                      <div className="field">
+                        <label htmlFor="answer-length">Answer length</label>
+                        <select
+                          id="answer-length"
+                          value={length}
+                          onChange={(e) => setLength(e.target.value)}
                         >
-                          <Send size={16} />
-                          Generate answer
-                        </Button>
-                      ) : (
-                        <ButtonLink to="/settings#ai" variant="secondary">
-                          AI settings
-                          <ArrowRight size={15} />
-                        </ButtonLink>
-                      )}
+                          <option value="short">Short answer</option>
+                          <option value="detailed">Detailed explanation</option>
+                        </select>
+                      </div>
                     </div>
-                  )}
+                    <ContextPreview context={context.data} />
+                    <AIAvailability />
+                    <Button
+                      variant="secondary"
+                      disabled={!aiReady || working || busy || !context.data}
+                      busy={working && job?.kind === 'answer'}
+                      onClick={() =>
+                        void startJob('answer', {
+                          question: search.question,
+                          passage_ids: search.passages.map((p) => p.chunk_id),
+                          language,
+                          length,
+                        }).catch(() => {})
+                      }
+                    >
+                      <Send size={16} />
+                      {answer ? 'Generate a new answer' : 'Generate answer'}
+                    </Button>
+                  </section>
                 </>
               )}
             </section>

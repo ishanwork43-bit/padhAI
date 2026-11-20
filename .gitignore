@@ -29,3 +29,6 @@ frontend/playwright-report/
 frontend/public/models/
 frontend/public/wasm/
 frontend/public/pdfjs/
+
+# Also exclude shared dependency-directory symlinks.
+node_modules

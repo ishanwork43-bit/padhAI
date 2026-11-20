@@ -1,4 +1,11 @@
-import { BROWSER_MODE } from '../lib/mode';
+import { useAI } from '../lib/ai-access';
+import {
+  AIAvailability,
+  ContextPreview,
+  LanguageChoice,
+  NoteSelection,
+  useAIContext,
+} from '../components/AIControls';
 import { useEffect, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
@@ -32,43 +39,21 @@ import { CitationLinks } from './Ask';
 import { date } from '../lib/format';
 
 export function Quiz() {
-  if (BROWSER_MODE)
-    return (
-      <div className="page-enter quiz-page">
-        <SectionHeading
-          eyebrow="PRACTICE WITH PURPOSE"
-          title="A little practice. A lot of clarity."
-          description="Quiz Mode belongs to the full study platform."
-        />
-        <div className="surface">
-          <EmptyState
-            icon={<ListChecks size={34} />}
-            title="AI quizzes are temporarily unavailable."
-            description="This browser edition runs on your device and has no AI generation service. You can search your notes and explore their sources now. Generated quizzes and answers need the hosted backend."
-          >
-            <ButtonLink to="/ask">
-              Search your notes <ArrowRight size={16} />
-            </ButtonLink>
-            <ButtonLink to="/notes" variant="secondary">
-              Open My Notes
-            </ButtonLink>
-          </EmptyState>
-        </div>
-      </div>
-    );
-  return <ServerQuiz />;
-}
-function ServerQuiz() {
   const { workspace, startJob, job, refresh } = useStudy(),
     [params, setParams] = useSearchParams(),
-    client = useQueryClient();
+    client = useQueryClient(),
+    ai = useAI();
   const [count, setCount] = useState(5),
     [difficulty, setDifficulty] = useState('medium'),
     [answers, setAnswers] = useState<(number | null)[]>([]),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(''),
     [confirm, setConfirm] = useState(false),
-    [source, setSource] = useState<SourceTarget | null>(null);
+    [source, setSource] = useState<SourceTarget | null>(null),
+    [selected, setSelected] = useState<string[]>([]),
+    [language, setLanguage] = useState('English');
+  const selectedIds = selected.filter((id) => workspace.documents.some((n) => n.id === id));
+  const context = useAIContext('quiz', { document_ids: selectedIds }, !!selectedIds.length);
   const id = params.get('id'),
     key = ['quiz', workspace.id, workspace.revision, id];
   const query = useQuery({
@@ -131,7 +116,9 @@ function ServerQuiz() {
     workspace.capabilities.ai_available &&
     workspace.settings.ai_consent &&
     workspace.capabilities.ai_requests_remaining > 0 &&
-    workspace.documents.length > 0;
+    workspace.documents.length > 0 &&
+    ai.cooldown === 0 &&
+    !!context.data;
   const answered = answers.filter((x) => x !== null).length;
   return (
     <div className="page-enter quiz-page">
@@ -153,6 +140,11 @@ function ServerQuiz() {
           ) : (
             quiz && (
               <>
+                {quiz.coverage?.sampled && (
+                  <p className="coverage-note">
+                    This quiz covers sampled excerpts, not every page of the selected notes.
+                  </p>
+                )}
                 {quiz.submitted && quiz.score ? (
                   <div className="quiz-score">
                     <span className="score-icon">
@@ -301,6 +293,8 @@ function ServerQuiz() {
                 Generate a practice quiz with evidence-backed explanations. Answers are revealed
                 after submission.
               </p>
+              <NoteSelection selected={selectedIds} onChange={setSelected} />
+              <LanguageChoice id="quiz-language" value={language} onChange={setLanguage} />
               <div className="field">
                 <label htmlFor="quiz-count">Questions</label>
                 <select
@@ -327,11 +321,20 @@ function ServerQuiz() {
                   ))}
                 </div>
               </fieldset>
+              <ContextPreview context={context.data} />
+              <AIAvailability />
               <Button
                 className="full-width"
                 disabled={!canGenerate || working}
                 busy={working && job?.kind === 'quiz'}
-                onClick={() => void startJob('quiz', { count, difficulty }).catch(() => {})}
+                onClick={() =>
+                  void startJob('quiz', {
+                    count,
+                    difficulty,
+                    language,
+                    document_ids: selectedIds,
+                  }).catch(() => {})
+                }
               >
                 <Sparkles size={17} />
                 Create my quiz
@@ -367,16 +370,20 @@ function ServerQuiz() {
                     {!workspace.documents.length
                       ? 'Add a little context first.'
                       : !workspace.capabilities.ai_available
-                        ? 'AI quizzes are currently off.'
+                        ? 'Private AI access required.'
                         : !workspace.settings.ai_consent
                           ? 'Your notes, your choice.'
-                          : 'AI allowance used.'}
+                          : !selectedIds.length
+                            ? 'Choose your source notes.'
+                            : ai.cooldown > 0
+                              ? 'The free allowance is cooling down.'
+                              : 'AI allowance used.'}
                   </h3>
                   <p>
                     {!workspace.documents.length
                       ? 'Upload your notes to begin.'
                       : !workspace.capabilities.ai_available
-                        ? 'This server runs keyless semantic search. A server administrator can enable optional AI generation.'
+                        ? 'Unlock your private AI session in Settings. Your notes and saved quizzes stay on this device.'
                         : !workspace.settings.ai_consent
                           ? 'Enable sharing excerpts with the AI provider in Settings to create a quiz.'
                           : 'You can retake saved quizzes or keep exploring your notes with semantic search.'}
@@ -387,14 +394,14 @@ function ServerQuiz() {
                       !workspace.documents.length
                         ? '/notes'
                         : !workspace.capabilities.ai_available
-                          ? '/ask'
+                          ? '/settings#ai'
                           : '/settings#ai'
                     }
                   >
                     {!workspace.documents.length
                       ? 'Go to My Notes'
                       : !workspace.capabilities.ai_available
-                        ? 'Explore your notes'
+                        ? 'Unlock private AI'
                         : 'Open settings'}
                     <ArrowRight size={15} />
                   </ButtonLink>
@@ -437,7 +444,7 @@ function ServerQuiz() {
               <EmptyState
                 icon={<ListChecks size={30} />}
                 title="Your practice collection starts here."
-                description="Generated quizzes will appear here so you can revisit them during this workspace’s lifetime."
+                description="Generated quizzes will appear here so you can revisit them in this browser."
               />
             </div>
           )}

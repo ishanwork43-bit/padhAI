@@ -11,7 +11,7 @@ const { study } = vi.hoisted(() => ({
     workspace: {
       id: 'owner',
       revision: 1,
-      documents: [{ id: 'note' }],
+      documents: [{ id: 'note', filename: 'notes.txt', type: 'txt', character_count: 100 }],
       quizzes: [],
       capabilities: { ai_available: false, ai_requests_remaining: 0 },
       settings: { ai_consent: false },
@@ -61,13 +61,11 @@ beforeEach(() => {
 });
 it('shows honest availability and prevents generation without configured AI', async () => {
   mount('/quiz');
-  expect(
-    screen.getByRole('heading', { name: 'AI quizzes are currently off.' }),
-  ).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: 'Private AI access required.' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: /Create my quiz/ })).toBeDisabled();
   expect(study.startJob).not.toHaveBeenCalled();
 });
-it('submits choices to the server and reveals only returned grades and explanations', async () => {
+it('submits choices to the local engine and reveals only returned grades and explanations', async () => {
   const user = userEvent.setup();
   const completed: QuizData = {
     ...draft,

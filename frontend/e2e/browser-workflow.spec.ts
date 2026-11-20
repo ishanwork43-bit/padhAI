@@ -25,8 +25,8 @@ test('real PDF/TXT/Markdown, quantized semantic retrieval, persistence, isolatio
   await page
     .getByLabel('Choose notes to upload')
     .setInputFiles([
-      path.resolve('../sample_data/dbms_notes.pdf'),
-      path.resolve('../sample_data/cloud_computing.txt'),
+      path.resolve('public/samples/dbms_notes.pdf'),
+      path.resolve('public/samples/cloud_computing.txt'),
     ]);
   await page.getByRole('button', { name: 'Add 2 documents', exact: true }).click();
   await expect(page.getByText('Added to your notes', { exact: true })).toHaveCount(2, {
@@ -126,10 +126,8 @@ test('real PDF/TXT/Markdown, quantized semantic retrieval, persistence, isolatio
   await page.getByRole('link', { name: 'Ask PadhAI', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Build search index' })).toBeVisible();
   await page.getByRole('link', { name: 'Quiz Mode', exact: true }).click();
-  await expect(
-    page.getByRole('heading', { name: 'AI quizzes are temporarily unavailable.' }),
-  ).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Create my quiz' })).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: 'Private AI access required.' })).toBeVisible();
+  await expect(page.getByRole('button', { name: /Create my quiz/ })).toBeDisabled();
   await page.getByRole('link', { name: 'Settings', exact: true }).click();
   await page.getByLabel('Workspace name', { exact: true }).fill('My local library');
   await page.getByRole('button', { name: 'Save preferences' }).click();
@@ -181,7 +179,7 @@ test('mobile layouts, real sample, duplicate and malformed uploads', async ({ pa
   await page.getByRole('button', { name: 'Remove empty.txt from upload list' }).click();
   await page
     .getByLabel('Choose notes to upload')
-    .setInputFiles(path.resolve('../sample_data/cloud_computing.txt'));
+    .setInputFiles(path.resolve('public/samples/cloud_computing.txt'));
   await page.getByRole('button', { name: 'Add 1 document', exact: true }).click();
   await expect(page.getByText('Already in your notes', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Done', exact: true }).click();

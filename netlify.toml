@@ -1,13 +1,15 @@
 [build]
-  base = "frontend"
-  command = "npm run build:netlify"
-  publish = "dist"
+  command = "npm --prefix frontend ci && npm --prefix frontend run build:netlify"
+  publish = "frontend/dist"
+  functions = "netlify/functions"
 
 [build.environment]
   NODE_VERSION = "24"
-  VITE_PADHAI_MODE = "browser"
   ONNXRUNTIME_NODE_INSTALL_CUDA = "skip"
-  # Static browser mode has no API host, credentials, functions, or paid inference.
+  # Provider secrets are configured only for Function runtime, never VITE_ variables.
+
+[functions]
+  node_bundler = "esbuild"
 
 [[headers]]
   for = "/*"

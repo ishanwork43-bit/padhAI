@@ -1,6 +1,6 @@
 import { openDB } from 'idb';
 import type { DBSchema, IDBPDatabase } from 'idb';
-import type { Note, Passage } from '../lib/types';
+import type { Note, Passage, Quiz, StudySummary } from '../lib/types';
 import { LocalError } from './constants';
 
 export interface Page {
@@ -20,6 +20,9 @@ export interface LocalData {
   revision: number;
   created_at: string;
   result_limit: number;
+  ai_consent?: boolean;
+  quizzes?: Quiz[];
+  summaries?: StudySummary[];
   documents: StoredNote[];
   index: { revision: number; model_id: string; passages: VectorPassage[] } | null;
   activity: { id: number; kind: string; label: string; created_at: string }[];
@@ -35,6 +38,9 @@ export function freshData(): LocalData {
     revision: 0,
     created_at: new Date().toISOString(),
     result_limit: 5,
+    ai_consent: false,
+    quizzes: [],
+    summaries: [],
     documents: [],
     index: null,
     activity: [],

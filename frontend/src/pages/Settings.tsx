@@ -1,24 +1,26 @@
-import { BROWSER_MODE } from '../lib/mode';
 import { useEffect, useState } from 'react';
 import {
   Check,
   Database,
+  KeyRound,
   Laptop,
   Moon,
   Save,
   ShieldCheck,
-  Sparkles,
   Sun,
   Trash2,
 } from 'lucide-react';
 import { useStudy } from '../lib/study';
+import { useAI } from '../lib/ai-access';
 import { errorMessage, jsonRequest } from '../lib/api';
 import { bytes } from '../lib/format';
 import { useTheme } from '../lib/theme';
 import { Badge, Button, ErrorNotice, Modal, SectionHeading } from '../components/ui';
+import { AIAvailability } from '../components/AIControls';
 import { useToast } from '../components/Toast';
 export function Settings() {
   const { workspace, refresh, invalidateNotes, reset } = useStudy(),
+    ai = useAI(),
     toast = useToast(),
     [theme, setTheme] = useTheme();
   const [name, setName] = useState(workspace.name),
@@ -26,6 +28,7 @@ export function Settings() {
     [consent, setConsent] = useState(workspace.settings.ai_consent),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(''),
+    [accessCode, setAccessCode] = useState(''),
     [action, setAction] = useState<'notes' | 'workspace' | null>(null),
     [deleting, setDeleting] = useState(false),
     [deleteError, setDeleteError] = useState('');
@@ -55,6 +58,15 @@ export function Settings() {
       setBusy(false);
     }
   }
+  async function unlock() {
+    try {
+      await ai.unlock(accessCode.trim());
+      setAccessCode('');
+      toast('Private AI unlocked for this browser session.');
+    } catch {
+      setAccessCode('');
+    }
+  }
   async function remove() {
     setDeleting(true);
     setDeleteError('');
@@ -68,7 +80,7 @@ export function Settings() {
       toast(
         action === 'workspace'
           ? 'A fresh workspace is ready.'
-          : 'All notes and study results deleted.',
+          : 'All local notes and study results deleted.',
       );
     } catch (reason) {
       setDeleteError(errorMessage(reason));
@@ -81,7 +93,7 @@ export function Settings() {
       <SectionHeading
         eyebrow="MAKE YOURSELF AT HOME"
         title="Your space. Your preferences."
-        description="A few thoughtful controls for the way you learn."
+        description="Control your study space, private AI access, and the data you choose to share."
       />
       <form
         onSubmit={(e) => {
@@ -92,46 +104,41 @@ export function Settings() {
         <section className="settings-section">
           <div className="settings-intro">
             <h2>Workspace</h2>
-            <p>Keep things familiar, from your workspace name to your search results.</p>
+            <p>A space that feels like yours.</p>
           </div>
           <div className="surface settings-panel">
             <div className="field">
               <label htmlFor="workspace-name">Workspace name</label>
               <input
                 id="workspace-name"
-                maxLength={60}
                 required
+                maxLength={60}
                 value={name}
                 onChange={(e) => setName(e.target.value)}
               />
-              <small>Personal to this browser’s workspace.</small>
             </div>
             <div className="field">
-              <label htmlFor="result-count">Passages per search</label>
+              <label htmlFor="result-limit">Search results</label>
               <select
-                id="result-count"
+                id="result-limit"
                 value={limit}
                 onChange={(e) => setLimit(Number(e.target.value))}
               >
-                {[3, 5, 8, 10].map((value) => (
-                  <option value={value} key={value}>
-                    {value} passages
+                {[3, 5, 8, 10].map((n) => (
+                  <option key={n} value={n}>
+                    {n} passages
                   </option>
                 ))}
                 {![3, 5, 8, 10].includes(limit) && <option value={limit}>{limit} passages</option>}
               </select>
-              <small>You may see fewer results when the evidence is limited.</small>
+              <small>You may see fewer results when evidence is limited.</small>
             </div>
           </div>
         </section>
         <section id="ai" className="settings-section">
           <div className="settings-intro">
-            <h2>AI & search</h2>
-            <p>
-              {BROWSER_MODE
-                ? 'Semantic search is keyless. Generated answers and quizzes are unavailable in this edition.'
-                : 'Semantic search is keyless. Generated answers and quizzes are optional.'}
-            </p>
+            <h2>AI & privacy</h2>
+            <p>Local search stays keyless. Groq generation is private and optional.</p>
           </div>
           <div className="surface settings-panel">
             <div className="settings-status">
@@ -140,64 +147,47 @@ export function Settings() {
               </span>
               <div>
                 <strong>Local semantic search</strong>
-                <p>
-                  {BROWSER_MODE
-                    ? 'A quantized MiniLM model runs in a worker on your device. The first use downloads about 45 MB of model and runtime files; your notes and questions never leave this browser.'
-                    : 'Embeddings run on the study server. No paid provider receives your search requests.'}
-                </p>
+                <p>PDF processing, embeddings, search, and source previews run in your browser.</p>
               </div>
-              <Badge tone="green">Available</Badge>
+              <Badge tone="green">On this device</Badge>
             </div>
-            <div className="settings-divider" />
             <div className="settings-status">
               <span className="feature-icon purple">
-                <Sparkles size={21} />
+                <KeyRound size={21} />
               </span>
               <div>
-                <strong>AI generation</strong>
+                <strong>Groq explanations, summaries & quizzes</strong>
                 <p>
-                  {workspace.capabilities.ai_available
-                    ? `${workspace.capabilities.ai_model} · ${workspace.capabilities.ai_requests_remaining} requests remaining in the current allowance.`
-                    : BROWSER_MODE
-                      ? 'Temporarily unavailable in this browser edition. Generated answers and quizzes require the hosted backend.'
-                      : 'Not enabled on this server. Only the server administrator can configure a provider key.'}
+                  Private access protects a limited free allowance. Your provider API key is never
+                  entered into this website.
                 </p>
               </div>
-              <Badge tone={workspace.capabilities.ai_available ? 'green' : 'neutral'}>
-                {workspace.capabilities.ai_available ? 'Available' : 'Off'}
-              </Badge>
             </div>
-            {!BROWSER_MODE && (
-              <label className="consent-control">
-                <input
-                  type="checkbox"
-                  checked={consent}
-                  disabled={!workspace.capabilities.ai_available && !consent}
-                  onChange={(e) => setConsent(e.target.checked)}
-                />
-                <span>
-                  <strong>Allow excerpts to be sent to OpenAI for generation</strong>
-                  <small>
-                    Only when you request an answer or quiz. Requests include relevant note text and
-                    filenames. Provider processing policies apply. Failed generation also uses an
-                    allowance slot.
-                  </small>
-                </span>
-              </label>
-            )}
+            <label className="consent-control">
+              <input
+                type="checkbox"
+                checked={consent}
+                onChange={(e) => setConsent(e.target.checked)}
+              />
+              <span>
+                <strong>Allow selected excerpts to be sent to Groq</strong>
+                <small>
+                  Only when I press a generation button. The reviewed text, source labels, and my
+                  question pass through PadhAI’s Netlify Function. Groq receives the source text and
+                  request; PDFs and search vectors stay local. Groq applies its own privacy and
+                  retention policies.
+                </small>
+              </span>
+            </label>
             <p className="small-muted">
-              {BROWSER_MODE
-                ? 'No API key or paid AI service is used in this edition.'
-                : 'Keys stay on the backend. This interface never asks for or stores an API key.'}
+              Save this choice below. Turning sharing off prevents new generations and discards
+              pending results. It cannot recall a request already sent to Groq.
             </p>
           </div>
         </section>
-        {error && <ErrorNotice message={error} />}
         <div className="settings-save">
-          <span>
-            {dirty ? 'You have unsaved preferences.' : 'Your preferences are up to date.'}
-          </span>
-          <Button type="submit" disabled={!dirty || !name.trim()} busy={busy}>
+          {error && <ErrorNotice message={error} />}
+          <Button type="submit" busy={busy} disabled={!dirty || !name.trim()}>
             <Save size={16} />
             Save preferences
           </Button>
@@ -205,105 +195,150 @@ export function Settings() {
       </form>
       <section className="settings-section">
         <div className="settings-intro">
-          <h2>Appearance</h2>
-          <p>Find your focus, day or night.</p>
+          <h2>Private AI access</h2>
+          <p>This is a project invitation, separate from your Groq API key.</p>
         </div>
-        <div className="surface settings-panel theme-options">
-          {(
-            [
+        <div className="surface settings-panel">
+          {!ai.status?.authenticated ? (
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                void unlock();
+              }}
+            >
+              <div className="field">
+                <label htmlFor="private-access-code">Private access code</label>
+                <input
+                  id="private-access-code"
+                  type="password"
+                  autoComplete="off"
+                  spellCheck={false}
+                  maxLength={128}
+                  value={accessCode}
+                  onChange={(e) => setAccessCode(e.target.value)}
+                  placeholder="Enter the invitation from the project owner"
+                />
+              </div>
+              <Button type="submit" disabled={!accessCode.trim()} busy={ai.busy}>
+                <KeyRound size={16} />
+                Unlock private AI
+              </Button>
+            </form>
+          ) : (
+            <>
+              <p>
+                <Check size={16} />
+                Your private session expires {new Date(ai.status.expires_at!).toLocaleString()}.
+              </p>
+              <Button
+                variant="secondary"
+                busy={ai.busy}
+                onClick={() => void ai.lock().catch(() => {})}
+              >
+                Lock private AI
+              </Button>
+            </>
+          )}
+          <AIAvailability />
+          <p className="small-muted">
+            Up to 20 shared requests per UTC day, a conservative token budget, and a one-minute
+            cooldown. Large requests or Groq’s own limits may reduce availability. No automatic
+            retries or unlimited AI.
+          </p>
+        </div>
+      </section>
+      <section className="settings-section">
+        <div className="settings-intro">
+          <h2>Appearance</h2>
+          <p>Choose what helps you focus.</p>
+        </div>
+        <div className="surface settings-panel">
+          <div className="theme-options">
+            {[
               { value: 'light', label: 'Light', icon: Sun },
               { value: 'dark', label: 'Dark', icon: Moon },
               { value: 'system', label: 'System', icon: Laptop },
-            ] as const
-          ).map(({ value, label, icon: Icon }) => (
-            <button key={value} aria-pressed={theme === value} onClick={() => setTheme(value)}>
-              <Icon size={22} />
-              <span>{label}</span>
-              {theme === value && <Check size={14} />}
-            </button>
-          ))}
+            ].map(({ value, label, icon: Icon }) => (
+              <button
+                key={value}
+                className={theme === value ? 'selected' : ''}
+                aria-pressed={theme === value}
+                onClick={() => setTheme(value as typeof theme)}
+              >
+                <Icon size={20} />
+                <span>{label}</span>
+                {theme === value && <Check size={15} />}
+              </button>
+            ))}
+          </div>
         </div>
       </section>
       <section id="data" className="settings-section">
         <div className="settings-intro">
-          <h2>Data & privacy</h2>
-          <p>
-            {BROWSER_MODE
-              ? 'A local library with clear boundaries.'
-              : 'A temporary workspace with clear boundaries.'}
-          </p>
+          <h2>Your data</h2>
+          <p>Stored in this browser profile. Keep your originals.</p>
         </div>
         <div className="surface settings-panel">
-          <div className="storage-heading">
-            <Database size={20} />
-            <strong>
-              {bytes(workspace.stats.bytes)} of {bytes(workspace.limits.max_workspace_bytes)}
-            </strong>
-            <span>
-              {workspace.stats.documents} / {workspace.limits.max_documents} notes
+          <div className="settings-status">
+            <span className="feature-icon">
+              <Database size={21} />
             </span>
+            <div>
+              <strong>
+                {workspace.stats.documents} notes · {bytes(workspace.stats.bytes)}
+              </strong>
+              <p>
+                {bytes(workspace.limits.max_workspace_bytes)} original-file allowance ·{' '}
+                {workspace.limits.max_documents} notes
+              </p>
+            </div>
           </div>
           <progress
-            className="storage-progress"
             value={workspace.stats.bytes}
             max={workspace.limits.max_workspace_bytes}
             aria-label="Workspace upload allowance used"
           />
-          <p className="small-muted">
-            Allowance is measured by original upload size; stored text may differ.
-          </p>
           <dl className="privacy-details">
             <div>
-              <dt>What is stored</dt>
+              <dt>Stored locally</dt>
               <dd>
-                {BROWSER_MODE
-                  ? 'Extracted text, filenames, preferences, and semantic vectors are stored in IndexedDB on this device. Original files are not retained. The public model is cached separately; it contains no notes.'
-                  : 'Extracted text, filenames, document metadata, preferences, and generated study results are stored on the backend. Original files are discarded after processing. The search index lives in server memory.'}
+                Extracted pages, filenames, preferences, vectors, summaries, quizzes, scores, and
+                activity use IndexedDB. Original file bytes are discarded after extraction. Anyone
+                using this browser profile can access its notes and quiz answer keys; this is a
+                practice tool, not a secure exam system.
               </dd>
             </div>
             <div>
-              <dt>Who can access it</dt>
+              <dt>Optional AI processing</dt>
               <dd>
-                {BROWSER_MODE
-                  ? 'Anyone using this browser profile can open its notes. Other devices and browser profiles have separate libraries. There is no login or cloud sync; the site does not upload note content.'
-                  : 'This browser holds a private, HttpOnly workspace cookie. There is no account or recovery link. Other visitors get separate workspaces. The service operator can access server storage.'}
+                Only reviewed excerpts leave this device after consent and an explicit generation
+                request. PadhAI does not persist or log study content on its Function. Netlify
+                stores hashed session identifiers, expiry, counters, and request IDs for abuse
+                prevention; platform and provider policies still apply.
               </dd>
             </div>
             <div>
-              <dt>{BROWSER_MODE ? 'Persistence & recovery' : 'Automatic expiry'}</dt>
+              <dt>Persistence & recovery</dt>
               <dd>
-                {BROWSER_MODE ? (
-                  'Notes and indexes survive refresh on this same site and browser. Clearing site data, private browsing, browser eviction, or changing the site address can remove access. Keep your originals; local storage is not a backup.'
-                ) : (
-                  <>
-                    {new Date(workspace.expires_at).toLocaleString(undefined, {
-                      dateStyle: 'medium',
-                      timeStyle: 'short',
-                    })}
-                    . The expiry is fixed; continuing to study does not extend it. Expired data is
-                    removed on access or by the cleanup loop, normally within 30 seconds while the
-                    server runs.
-                  </>
-                )}
+                Refresh keeps saved notes and results. Browser eviction, clearing site data, private
+                browsing, or another device/origin can lose access. There is no account backup or
+                cloud sync.
               </dd>
             </div>
             <div>
-              <dt>When you delete</dt>
+              <dt>Deletion</dt>
               <dd>
-                {BROWSER_MODE
-                  ? 'Deleting a note removes its saved text and invalidates the index. Clearing notes removes all documents, vectors, and activity; reset also removes preferences. In-flight processing cannot restore deleted notes. Browser-level forensic erasure is not guaranteed.'
-                  : 'Text, associated study results, and the active search index are removed. In-flight work cannot save deleted results. Provider requests already sent cannot be recalled; host backups follow the operator’s retention policy. Keep your own original notes.'}
+                Deleting a note removes its text and clears the index, summaries, and quizzes,
+                including scores. Clearing notes removes all study material and activity. Reset also
+                removes workspace preferences and sharing consent. In-flight results cannot restore
+                deleted notes. Previously sent provider requests cannot be recalled.
               </dd>
             </div>
           </dl>
           <div className="danger-actions">
             <div>
               <strong>Clear all notes</strong>
-              <p>
-                {BROWSER_MODE
-                  ? 'Remove documents, search vectors, and activity.'
-                  : 'Remove documents, quizzes, answers, and activity.'}
-              </p>
+              <p>Remove documents, vectors, summaries, quizzes, and activity.</p>
             </div>
             <Button
               variant="danger"
@@ -320,7 +355,7 @@ export function Settings() {
           <div className="danger-actions">
             <div>
               <strong>Start a fresh workspace</strong>
-              <p>Delete this entire workspace, including preferences.</p>
+              <p>Also remove preferences and passage-sharing consent.</p>
             </div>
             <Button
               variant="secondary"
@@ -344,10 +379,8 @@ export function Settings() {
         <div className="modal-body">
           <p>
             {action === 'notes'
-              ? BROWSER_MODE
-                ? 'All extracted documents, search vectors, and activity will be removed.'
-                : 'All extracted documents, quizzes, answer results, and activity will be removed.'
-              : 'All notes, study results, activity, and preferences will be deleted. A new empty workspace will open.'}
+              ? 'All locally saved notes, search vectors, summaries, quizzes, scores, and activity will be removed.'
+              : 'All local study material, preferences, and sharing consent will be removed. A new empty workspace will open.'}
           </p>
           {deleteError && <ErrorNotice message={deleteError} />}
         </div>
@@ -356,7 +389,7 @@ export function Settings() {
             Keep my workspace
           </Button>
           <Button variant="danger" busy={deleting} onClick={() => void remove()}>
-            Delete {action === 'notes' ? 'all notes' : 'workspace'}
+            {action === 'notes' ? 'Delete all notes' : 'Reset workspace'}
           </Button>
         </div>
       </Modal>

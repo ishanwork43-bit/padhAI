@@ -16,6 +16,7 @@ import {
   Settings2,
   ShieldCheck,
   Sprout,
+  FileText,
   X,
 } from 'lucide-react';
 import { useStudy } from '../lib/study';
@@ -27,6 +28,7 @@ const links = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/notes', label: 'My Notes', icon: Library },
   { to: '/ask', label: 'Ask PadhAI', icon: MessageSquareText },
+  { to: '/summary', label: 'AI Summary', icon: FileText },
   { to: '/quiz', label: 'Quiz Mode', icon: ListChecks },
 ];
 export interface LayoutActions {
@@ -193,7 +195,7 @@ export function AppLayout() {
                     .catch((error) => toast(errorMessage(error), true));
                 }}
               >
-                Stop indexing
+                {job.kind === 'index' ? 'Stop indexing' : 'Stop generation'}
               </button>
             )}
           </div>
@@ -212,7 +214,7 @@ export function AppLayout() {
           <span>
             <ShieldCheck size={13} />
             {BROWSER_MODE
-              ? 'Your notes stay on this device.'
+              ? 'Notes stay local. AI shares excerpts with consent.'
               : 'Your notes belong to this workspace.'}
           </span>
           <Link to="/settings#data">Storage & privacy</Link>
@@ -254,7 +256,7 @@ export function AppLayout() {
               <h3>Practice with purpose</h3>
               <p>
                 {BROWSER_MODE
-                  ? 'Explore evidence and revisit your source passages. Generated answers and quizzes are unavailable in this browser edition.'
+                  ? 'Explore evidence and revisit your source passages. Unlock private Groq access and choose passage-sharing consent to generate answers, summaries, and quizzes.'
                   : 'When AI is enabled, create quizzes from your notes. Explanations appear after you submit. Retakes use the same questions.'}
               </p>
             </section>

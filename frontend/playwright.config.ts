@@ -1,7 +1,7 @@
 import { defineConfig } from '@playwright/test';
 export default defineConfig({
   testDir: './e2e',
-  testMatch: process.env.E2E_MODE === 'server' ? 'workflow.spec.ts' : 'browser-*.spec.ts',
+  testMatch: 'browser-*.spec.ts',
   timeout: 180000,
   fullyParallel: false,
   workers: 1,

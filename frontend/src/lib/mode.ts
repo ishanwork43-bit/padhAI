@@ -1,2 +1,2 @@
-/** Browser is the default on this branch. The HTTP implementation stays available. */
-export const BROWSER_MODE = import.meta.env.VITE_PADHAI_MODE !== 'server';
+// This branch always uses local document processing. The FastAPI edition is preserved separately.
+export const BROWSER_MODE = true;

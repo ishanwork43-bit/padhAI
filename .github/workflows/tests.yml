@@ -3,160 +3,38 @@ on: [push, pull_request]
 permissions:
   contents: read
 jobs:
-  test:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ["3.11", "3.12"]
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python-version }}
-      - run: python -m pip install "torch>=2.6,<3" --index-url https://download.pytorch.org/whl/cpu
-      - run: python -m pip install -r requirements-dev.txt
-      - run: python -m pip check
-      - run: python -m pytest -q
-      - run: python scripts/build_release.py --output-dir dist
-  landing-page:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "24"
-      - run: npm ci
-        working-directory: web
-      - run: npm test
-        working-directory: web
-      - run: npm run build
-        working-directory: web
-
-  platform-frontend:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "24"
-          cache: npm
-          cache-dependency-path: frontend/package-lock.json
-      - run: npm ci
-        working-directory: frontend
-      - run: npm test
-        working-directory: frontend
-      - run: npm run test:hosting
-        working-directory: frontend
-      - run: npm run build
-        working-directory: frontend
-  platform-browser:
+  application:
     runs-on: ubuntu-latest
     env:
-      ENABLE_PAID_AI: "false"
-      OPENAI_API_KEY: ""
-      VITE_PADHAI_MODE: "server"
-      E2E_MODE: "server"
-      ONNXRUNTIME_NODE_INSTALL_CUDA: "skip"
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "24"
-      - uses: actions/cache@v4
-        with:
-          path: ~/.cache/huggingface
-          key: minilm-c9745ed1d9f207416be6d2e6f8de32d1f16199bf
-      - run: python -m pip install "torch>=2.6,<3" --index-url https://download.pytorch.org/whl/cpu
-      - run: python -m pip install -r requirements-api.txt
-      - run: npm ci
-        working-directory: frontend
-      - run: npx playwright install --with-deps chromium
-        working-directory: frontend
-      - name: Cache the pinned local model
-        run: python -c "from src.embeddings import LocalEmbedder; LocalEmbedder()"
-      - name: Start API and frontend
-        run: |
-          python -m uvicorn api.main:app --port 8000 --no-access-log > /tmp/padhai-api.log 2>&1 &
-          npm --prefix frontend run dev > /tmp/padhai-vite.log 2>&1 &
-          for attempt in $(seq 1 60); do
-            if curl --fail --silent http://localhost:8000/api/health && curl --fail --silent --output /dev/null http://localhost:5173; then
-              exit 0
-            fi
-            sleep 1
-          done
-          exit 1
-      - run: npm run test:e2e
-        working-directory: frontend
-        env:
-          ENABLE_PAID_AI: "false"
-      - uses: actions/upload-artifact@v4
-        if: failure()
-        with:
-          name: platform-browser-diagnostics
-          path: frontend/test-results
-          retention-days: 3
-  platform-container:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Build standalone Python service
-        run: docker build -f deployment/platform/Dockerfile -t padhai-api:test .
-      - name: Exercise the container and its cached model
-        run: |
-          docker run -d --name padhai-api -p 8000:8000 -e API_ALLOWED_ORIGINS=http://localhost:5173 padhai-api:test
-          for attempt in $(seq 1 60); do
-            if curl --fail --silent http://localhost:8000/api/health; then
-              break
-            fi
-            sleep 1
-          done
-          python scripts/smoke_api.py --base-url http://localhost:8000
-          docker exec padhai-api python -c "import os; assert os.getuid() == 10001"
-      - name: Container diagnostics
-        if: failure()
-        run: docker logs padhai-api
-  browser-only:
-    runs-on: ubuntu-latest
-    env:
-      VITE_PADHAI_MODE: "browser"
-      ONNXRUNTIME_NODE_INSTALL_CUDA: "skip"
+      ONNXRUNTIME_NODE_INSTALL_CUDA: skip
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: "24"
-          cache: npm
-          cache-dependency-path: frontend/package-lock.json
-      - uses: actions/cache@v4
-        with:
-          path: frontend/public/models
-          key: browser-minilm-751bff37182d3f1213fa05d7196b954e230abad9-q8
+          node-version: '24'
       - run: npm ci
-        working-directory: frontend
+      - run: npm --prefix frontend ci
+      - run: npm test
+      - run: npm --prefix frontend test
+      - run: npm --prefix frontend run test:hosting
+      - run: npm --prefix frontend run build:netlify
+      - run: npm run test:security
       - run: npx playwright install --with-deps chromium
         working-directory: frontend
-      - run: npm run build:netlify
-        working-directory: frontend
-      - name: Start static browser preview
+      - name: Start static preview
         run: |
-          npm --prefix frontend run preview -- --port 4174 --strictPort > /tmp/padhai-browser.log 2>&1 &
+          npm --prefix frontend run preview -- --port 4176 --strictPort > /tmp/padhai-preview.log 2>&1 &
           for attempt in $(seq 1 30); do
-            if curl --fail --silent --output /dev/null http://localhost:4174; then
-              exit 0
-            fi
+            if curl --fail --silent --output /dev/null http://localhost:4176; then exit 0; fi
             sleep 1
           done
           exit 1
-      - run: npm run test:e2e
-        working-directory: frontend
+      - run: npm --prefix frontend run test:e2e
         env:
-          E2E_URL: http://localhost:4174
+          E2E_URL: http://localhost:4176
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
-          name: browser-only-diagnostics
+          name: browser-diagnostics
           path: frontend/test-results
           retention-days: 3

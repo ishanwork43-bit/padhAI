@@ -1,3 +1,7 @@
+## 0.3.0 — Private Groq preview
+
+Adds optional Groq answers, summaries, and quizzes behind private access and atomic quotas. Keeps document processing and study data local. Cleans inactive deployment files from this branch; preserved architecture branches and history remain intact. Preview verification is documented separately.
+
 # Changelog
 
 ## 0.2.0 — integrated platform (deployment pending)

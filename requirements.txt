@@ -1,3 +1,0 @@
-# Preserved Streamlit runtime.
--r requirements-core.txt
-streamlit>=1.41,<2

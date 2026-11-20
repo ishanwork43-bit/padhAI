@@ -58,6 +58,7 @@ export interface QuizSummary {
   score: Score | null;
 }
 export interface Quiz extends QuizSummary {
+  coverage?: AICoverage;
   questions: {
     question: string;
     options: string[];
@@ -70,12 +71,13 @@ export interface Quiz extends QuizSummary {
 }
 export interface Job {
   id: string;
-  kind: 'index' | 'answer' | 'quiz';
+  kind: 'index' | 'answer' | 'quiz' | 'summary';
   status: 'queued' | 'running' | 'completed' | 'failed';
   phase: string;
   revision: number;
-  result: AnswerResult | { quiz_id: string } | { indexed_chunks: number } | null;
-  error: { code: string; message: string } | null;
+  result:
+    AnswerResult | { quiz_id: string } | { summary_id: string } | { indexed_chunks: number } | null;
+  error: { code: string; message: string; retry_after?: number } | null;
 }
 export interface Workspace {
   id: string;
@@ -118,4 +120,24 @@ export interface Preview extends Note {
     total_characters: number;
     truncated: boolean;
   };
+}
+
+export interface AICoverage {
+  passages: number;
+  total_passages: number;
+  characters: number;
+  total_characters: number;
+  filenames: string[];
+  sampled: boolean;
+}
+export interface StudySummary {
+  id: string;
+  created_at: string;
+  language: string;
+  length: string;
+  document_ids: string[];
+  coverage: AICoverage;
+  mode: string;
+  message: string;
+  claims: AnswerResult['claims'];
 }

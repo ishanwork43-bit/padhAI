@@ -1,4 +1,4 @@
-import { APIError } from '../lib/http-api';
+import { APIError } from '../lib/errors';
 import type { Note } from '../lib/types';
 let worker: Worker | undefined;
 // ONNX Runtime retains a rejected initialization promise after some load failures.

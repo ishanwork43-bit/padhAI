@@ -14,13 +14,19 @@ export class LocalError extends Error {
     public code: string,
     message: string,
     public status = 400,
+    public retryAfter?: number,
   ) {
     super(message);
   }
 }
 export function safeError(error: unknown) {
   if (error instanceof LocalError)
-    return { code: error.code, message: error.message, status: error.status };
+    return {
+      code: error.code,
+      message: error.message,
+      status: error.status,
+      ...(error.retryAfter ? { retry_after: error.retryAfter } : {}),
+    };
   if (error instanceof DOMException && error.name === 'QuotaExceededError') {
     return {
       code: 'storage_full',
