@@ -1,5 +1,15 @@
 # Verification and remaining issues
 
+## Public AI preview — 2026-11-21
+
+Invitations and unlock controls have been replaced by automatic anonymous sessions. The API now enforces per-network limits alongside the existing shared daily counters. Twenty-question generation remains disabled in the UI and is also rejected by the public API.
+
+Local verification: 23 mocked Function/security tests cover anonymous access, network binding, spoofed forwarding headers, cookie resets, challenge signature/work/expiry/origin/replay, durable concurrent quotas, migration of existing shared counters, visitor token budgets, CSRF, consent, and provider failures. Six focused frontend tests passed. The TypeScript/Vite build passed.
+
+One focused local Chromium workflow passed using the real browser proof worker and Function handler with in-memory test storage and a mocked provider: automatic access, no invitation field, consent initially off, saving consent, TXT import, summary generation, persistence after refresh without a second session, and the disabled twenty-question option. External network requests were blocked in this test. No real Groq request or hosted application test was made for this change; provider availability remains subject to the existing runtime secret and free quota.
+
+See [public-access limits and residual risks](deployment.md). Earlier private-access results below are historical evidence, not a description of the current access flow.
+
 ## Documentation and cleanup checks — 2026-11-21
 
 The static-hosting regression test passed after removal of the inactive external proxy path (one current routing test replaces twelve tests covering both editions). TypeScript passed with unused-local and unused-parameter checks enabled. Asset preparation passed with network access blocked, using cached files and their pinned hashes. Script syntax, targeted formatting, local Markdown links, and whitespace checks passed.
@@ -41,7 +51,7 @@ Broader successful Hinglish/detailed generation, actual UI retakes, and reliable
 
 Preview: https://groq-preview--padhai-ishan.netlify.app
 
-Current preview deploy: `6b011ed1e8fcde8d2d90e666`, UI commit `8471258` (20-question option disabled). The preceding corrective deploy `6b011d902e88485aca134e2e` restored the provider schema; neither update made additional live generation requests.
+Current public preview deploy: `6b012381ce02f27ae00cc288`. The earlier UI deploy `6b011ed1e8fcde8d2d90e666`, commit `8471258`, disabled the 20-question option. The preceding corrective deploy `6b011d902e88485aca134e2e` restored the provider schema; neither update made additional live generation requests.
 
 Production remains `6af795ace4749b2373c80036`, confirmed after the candidate deployment on 2026-11-21. No production deployment, main merge, branch deletion, paid upgrade, or history rewrite was performed. Both earlier architecture branches remain preserved.
 

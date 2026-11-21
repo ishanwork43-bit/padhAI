@@ -370,7 +370,7 @@ export function Quiz() {
                     {!workspace.documents.length
                       ? 'Add a little context first.'
                       : !workspace.capabilities.ai_available
-                        ? 'Private AI access required.'
+                        ? 'AI connection unavailable.'
                         : !workspace.settings.ai_consent
                           ? 'Your notes, your choice.'
                           : !selectedIds.length
@@ -383,7 +383,7 @@ export function Quiz() {
                     {!workspace.documents.length
                       ? 'Upload your notes to begin.'
                       : !workspace.capabilities.ai_available
-                        ? 'Unlock your private AI session in Settings. Your notes and saved quizzes stay on this device.'
+                        ? 'Retry the AI connection in Settings. No account is needed; your notes and saved quizzes stay on this device.'
                         : !workspace.settings.ai_consent
                           ? 'Enable sharing excerpts with the AI provider in Settings to create a quiz.'
                           : 'You can retake saved quizzes or keep exploring your notes with semantic search.'}
@@ -401,7 +401,7 @@ export function Quiz() {
                     {!workspace.documents.length
                       ? 'Go to My Notes'
                       : !workspace.capabilities.ai_available
-                        ? 'Unlock private AI'
+                        ? 'AI settings'
                         : 'Open settings'}
                     <ArrowRight size={15} />
                   </ButtonLink>

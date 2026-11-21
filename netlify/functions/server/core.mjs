@@ -1,7 +1,7 @@
 import { createHash, createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 
 export const MODEL = 'openai/gpt-oss-120b';
-export const LIMITS = Object.freeze({ body: 24000, sources: 8, sourceBytes: 4400, dayRequests: 20, dayTokens: 180000, cooldown: 60000, lease: 45000, session: 8 * 3600000 });
+export const LIMITS = Object.freeze({ body: 24000, sources: 8, sourceBytes: 4400, dayRequests: 20, dayTokens: 180000, visitorRequests: 5, visitorTokens: 45000, cooldown: 60000, lease: 45000, session: 8 * 3600000 });
 export class AIError extends Error {
   constructor(status, code, message, retryAfter) { super(message); Object.assign(this, { status, code, retryAfter }); }
 }
@@ -33,10 +33,10 @@ export async function readJSON(request, max = LIMITS.body) {
   } catch (error) { if (error instanceof AIError) throw error; fail('invalid_json', 'The request could not be read.'); } finally { clearTimeout(timer); }
 }
 export function configured(env) {
-  return env.PADHAI_AI_ENABLED === 'true' && !!env.GROQ_API_KEY && /^[a-f0-9]{64}$/.test(env.PADHAI_AI_ACCESS_HASH ?? '') && /^[A-Za-z0-9_-]{43,100}$/.test(env.PADHAI_AI_SESSION_SECRET ?? '');
+  return env.PADHAI_AI_ENABLED === 'true' && !!env.GROQ_API_KEY && /^[A-Za-z0-9_-]{43,100}$/.test(env.PADHAI_AI_SESSION_SECRET ?? '');
 }
 export function requireConfiguration(env) {
-  if (!configured(env)) throw new AIError(503, 'ai_disabled', 'Private AI is not configured. Local search is still available.');
+  if (!configured(env)) throw new AIError(503, 'ai_disabled', 'AI is not configured. Local search is still available.');
 }
 export function requireOrigin(request) {
   const url = new URL(request.url), origin = request.headers.get('origin');
@@ -44,19 +44,19 @@ export function requireOrigin(request) {
 }
 const cookieName = '__Host-padhai_ai';
 export const cookie = (token, age = LIMITS.session / 1000) => `${cookieName}=${token}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=${age}`;
-export function createSession(env, now) {
-  const session = { nonce: randomBytes(24).toString('base64url'), csrf: randomBytes(24).toString('base64url'), owner: env.PADHAI_AI_ACCESS_HASH, expires: now + LIMITS.session };
+export function createSession(env, now, owner) {
+  const session = { nonce: randomBytes(24).toString('base64url'), csrf: randomBytes(24).toString('base64url'), owner, expires: now + LIMITS.session };
   const encoded = Buffer.from(JSON.stringify(session)).toString('base64url');
   return { session, token: `${encoded}.${createHmac('sha256', env.PADHAI_AI_SESSION_SECRET).update(encoded).digest('base64url')}` };
 }
-export function parseSession(request, env, now) {
+export function parseSession(request, env, now, owner) {
   const token = (request.headers.get('cookie') ?? '').split(';').map(s => s.trim()).find(s => s.startsWith(`${cookieName}=`))?.slice(cookieName.length + 1);
-  if (!token || token.length > 1500) throw new AIError(401, 'locked', 'Unlock private AI in Settings to continue.');
+  if (!token || token.length > 1500) throw new AIError(401, 'locked', 'Verify this browser connection to continue.');
   const [value, signature, extra] = token.split('.');
   const expected = createHmac('sha256', env.PADHAI_AI_SESSION_SECRET).update(value).digest('base64url');
-  if (extra || !equal(signature, expected)) throw new AIError(401, 'locked', 'Your AI session is invalid. Unlock it again.');
-  let session; try { session = JSON.parse(Buffer.from(value, 'base64url').toString('utf8')); } catch { throw new AIError(401, 'locked', 'Unlock private AI again.'); }
-  if (!object(session) || !equal(session.owner, env.PADHAI_AI_ACCESS_HASH) || !Number.isFinite(session.expires) || session.expires <= now || session.expires > now + LIMITS.session || typeof session.nonce !== 'string' || typeof session.csrf !== 'string') throw new AIError(401, 'locked', 'Your AI session expired. Unlock it again.');
+  if (extra || !equal(signature, expected)) throw new AIError(401, 'locked', 'Your AI session is invalid. Retry the AI connection.');
+  let session; try { session = JSON.parse(Buffer.from(value, 'base64url').toString('utf8')); } catch { throw new AIError(401, 'locked', 'Retry the AI connection.'); }
+  if (!object(session) || !equal(session.owner, owner) || !Number.isFinite(session.expires) || session.expires <= now || session.expires > now + LIMITS.session || typeof session.nonce !== 'string' || typeof session.csrf !== 'string') throw new AIError(401, 'locked', 'Your AI session expired or your network changed. Retry the AI connection.');
   return session;
 }
 export function requireCSRF(request, session) {
@@ -80,36 +80,29 @@ export class SecurityStore {
     }
     throw new AIError(503, 'quota_contention', 'AI protection is busy. Please try again shortly.');
   }
-  async loginAttempt() {
-    const window = Math.floor(this.now() / 60000);
-    return this.change('login', old => {
-      const data = old?.window === window ? old : { window, count: 0 };
-      if (data.count >= 15) throw new AIError(429, 'login_limit', 'Too many unlock attempts. Try again in a minute.', 60);
-      data.count++; return { data };
-    });
-  }
-  async register(session) {
-    return this.change('sessions', old => {
-      const data = Object.fromEntries(Object.entries(old ?? {}).filter(([, s]) => s.expires > this.now()));
-      const oldest = Object.keys(data);
-      while (oldest.length >= 8) delete data[oldest.shift()];
-      data[digest(session.nonce)] = { owner: session.owner, expires: session.expires };
+  async admission(owner) {
+    const window = Math.floor(this.now() / 600000);
+    return this.change('public-admission', old => {
+      const data = old?.window === window ? old : { window, count: 0, owners: {} };
+      if (data.count >= 120 || (data.owners[owner] ?? 0) >= 12) throw new AIError(429, 'connection_limit', 'Too many AI connection attempts. Try again later.', 600);
+      data.count++; data.owners[owner] = (data.owners[owner] ?? 0) + 1;
       return { data };
     });
   }
-  async authorize(session) {
-    const item = (await this.read('sessions'))?.data?.[digest(session.nonce)];
-    if (!item || item.expires <= this.now() || !equal(item.owner, session.owner)) throw new AIError(401, 'locked', 'Your AI session has ended. Unlock it again.');
-  }
-  async revoke(session) {
-    await this.change('sessions', old => { const data = old ?? {}; delete data[digest(session.nonce)]; return { data }; });
+  async consumeChallenge(id, expires) {
+    return this.change('public-challenges', old => {
+      const data = Object.fromEntries(Object.entries(old ?? {}).filter(([, until]) => until > this.now()));
+      if (data[id]) throw new AIError(409, 'challenge_used', 'This browser check was already used. Retry the AI connection.');
+      if (Object.keys(data).length >= 120) throw new AIError(429, 'connection_limit', 'AI connection checks are busy. Try again later.', 180);
+      data[id] = expires; return { data };
+    });
   }
   current(old) {
     const day = new Date(this.now()).toISOString().slice(0, 10);
-    return old?.day === day ? old : { day, requests: 0, tokens: 0, owners: {}, ids: [], next: old?.next ?? 0, lease: old?.lease ?? null };
+    return old?.day === day ? { ...old, visitorTokens: old.visitorTokens ?? {} } : { day, requests: 0, tokens: 0, owners: {}, visitorTokens: {}, ids: [], next: old?.next ?? 0, lease: old?.lease ?? null };
   }
   quota(data, owner) {
-    return { remaining: Math.max(0, Math.min(LIMITS.dayRequests - data.requests, LIMITS.dayRequests - (data.owners[owner] ?? 0))), token_budget_remaining: Math.max(0, LIMITS.dayTokens - data.tokens), next_request_at: Math.max(data.next, data.lease?.until ?? 0), resets_at: `${new Date(this.now() + 86400000).toISOString().slice(0, 10)}T00:00:00.000Z` };
+    return { remaining: Math.max(0, Math.min(LIMITS.dayRequests - data.requests, LIMITS.visitorRequests - (data.owners[owner] ?? 0))), token_budget_remaining: Math.max(0, Math.min(LIMITS.dayTokens - data.tokens, LIMITS.visitorTokens - (data.visitorTokens[owner] ?? 0))), next_request_at: Math.max(data.next, data.lease?.until ?? 0), resets_at: `${new Date(this.now() + 86400000).toISOString().slice(0, 10)}T00:00:00.000Z` };
   }
   async status(owner) { return this.quota(this.current((await this.read('quota'))?.data), owner); }
   async reserve(owner, id, tokens) {
@@ -118,8 +111,8 @@ export class SecurityStore {
       if (data.ids.includes(id)) throw new AIError(409, 'already_requested', 'This generation was already started. Check its result before retrying.');
       const until = Math.max(data.next, data.lease?.until ?? 0);
       if (until > now) throw new AIError(429, 'cooldown', 'The shared free AI allowance is cooling down. Please wait before generating again.', Math.ceil((until - now) / 1000));
-      if (data.requests >= LIMITS.dayRequests || (data.owners[owner] ?? 0) >= LIMITS.dayRequests || data.tokens + tokens > LIMITS.dayTokens) throw new AIError(429, 'daily_quota', 'The daily AI allowance is used. Local search and existing quizzes still work.', Math.ceil((Date.parse(this.quota(data, owner).resets_at) - now) / 1000));
-      data.requests++; data.tokens += tokens; data.owners[owner] = (data.owners[owner] ?? 0) + 1; data.ids.push(id);
+      if (data.requests >= LIMITS.dayRequests || (data.owners[owner] ?? 0) >= LIMITS.visitorRequests || data.tokens + tokens > LIMITS.dayTokens || (data.visitorTokens[owner] ?? 0) + tokens > LIMITS.visitorTokens) throw new AIError(429, 'daily_quota', 'The daily AI allowance is used. Local search and existing quizzes still work.', Math.ceil((Date.parse(this.quota(data, owner).resets_at) - now) / 1000));
+      data.requests++; data.tokens += tokens; data.owners[owner] = (data.owners[owner] ?? 0) + 1; data.visitorTokens[owner] = (data.visitorTokens[owner] ?? 0) + tokens; data.ids.push(id);
       data.next = now + LIMITS.cooldown; data.lease = { id, until: now + LIMITS.lease };
       return { data, result: this.quota(data, owner) };
     });

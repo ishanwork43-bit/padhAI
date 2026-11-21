@@ -1,4 +1,4 @@
-# Preview deployment and private AI
+# Preview deployment and public AI
 
 ## Build and hosting
 
@@ -22,18 +22,25 @@ Configure these only for the Netlify Function runtime:
 | -------------------------- | ------------------------------------------------------------------- |
 | `GROQ_API_KEY`             | Provider credential                                                 |
 | `PADHAI_AI_ENABLED=true`   | Explicit generation enable switch                                   |
-| `PADHAI_AI_ACCESS_HASH`    | SHA256 of a cryptographically random private invitation             |
 | `PADHAI_AI_SESSION_SECRET` | Independent random base64url signing secret, at least 43 characters |
 
-Share invitations privately. Never put secrets in frontend code, `VITE_` variables, public build artifacts, screenshots, or logs. `.env.example` lists names only. Deployment-only secret overrides can configure a preview without changing production settings; do not print CLI secret arguments or environment dumps. Missing settings disable generation while local search remains available.
+Never put secrets in frontend code, `VITE_` variables, public build artifacts, screenshots, or logs. `.env.example` lists names only. A preview can receive deployment-only overrides without changing production settings. Do not print CLI secret arguments or environment dumps. Missing settings disable generation while local search remains available. `PADHAI_AI_ACCESS_HASH` and old invitations are no longer used; remove obsolete overrides from future deployments.
 
-## Private access and quotas
+## Anonymous access and quotas
 
-In Settings, enter the owner's private invitation and select **Unlock private AI**. Review excerpt-sharing consent and save preferences before generating. An invitation is not a Groq API key. Sessions expire after eight hours; locking revokes the current session, and rotating the signing secret invalidates existing sessions.
+Visitors need no invitation or account. AI pages automatically check for an anonymous session and, if needed, solve a short proof of work in a browser worker. This sends no study content. Explicit excerpt-sharing consent in Settings is still required before generation.
 
-Defaults are 20 shared requests per UTC day, a conservative 180,000-token reservation budget, and a one-minute cooldown. Large requests may exhaust the token budget first. Failed provider requests consume reservations; there are no automatic provider retries. Do not reset the durable Blobs counters to bypass quotas.
+The Function uses **Netlify's trusted `context.ip`**, not client forwarding headers. IPv4 addresses and IPv6 /64 networks map to keyed daily hashes; raw IP addresses are not stored by application code. Cookies are signed, HttpOnly, Secure, SameSite=Strict, and bound to that network/day. They last up to eight hours. Browser checks are signed, origin-bound, expire after three minutes, require a 16-bit SHA256 proof, and can be consumed only once. A missing trusted address fails closed.
 
-Groq and Netlify Free limits also apply. Public traffic can exhaust hosting allowance even with private generation. No paid upgrade or unlimited-usage guarantee is included. See [architecture and privacy](audit/architecture.md) for data retention and security boundaries.
+Durable limits apply across Function instances and previews:
+
+- Shared: **20 requests and 180,000 reserved tokens per UTC day**, with a one-minute cooldown and an in-flight lease.
+- Per visitor network: **5 requests and 45,000 reserved tokens per UTC day**. Clearing cookies or forging browser headers does not reset these counters.
+- Session setup: **12 attempts per network and 120 globally per ten-minute window**, including challenge and session requests. Challenge-replay records are bounded and pruned on use.
+
+Large requests may exhaust a token budget first. Failed provider requests consume reservations; there are no automatic generation retries. Existing daily counters are preserved when upgrading from private access. Do not reset Blobs counters to bypass quotas. Local search, saved results, and quiz retakes remain available when AI quota is exhausted.
+
+Proof of work is a speed bump, not a CAPTCHA or proof of humanity. Bots can solve it, rotate networks, or exhaust the shared allowance or setup limit. People behind a shared network may share quotas; VPN/network changes can require another browser check. Heavy public traffic can exhaust Netlify Free invocation/storage/bandwidth limits even without successful Groq requests. The application caps provider usage; it cannot guarantee availability under attack. No paid upgrades or unrestricted provider proxy are enabled. See [architecture and privacy](audit/architecture.md).
 
 ## Production review
 

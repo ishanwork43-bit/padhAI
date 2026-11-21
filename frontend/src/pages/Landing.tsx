@@ -244,7 +244,7 @@ export function Landing() {
                 <h3>Honest about what’s possible</h3>
                 <p>
                   {BROWSER_MODE
-                    ? 'Search stays local and keyless. With private access and your consent, Groq can explain selected passages, summarize notes, and create practice quizzes.'
+                    ? 'Search stays local and keyless. With your consent, Groq can explain selected passages, summarize notes, and create practice quizzes.'
                     : 'Search works without a paid key. AI generation is clearly optional, and missing evidence stays missing.'}
                 </p>
               </div>

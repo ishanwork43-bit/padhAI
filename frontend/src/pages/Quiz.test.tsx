@@ -61,7 +61,7 @@ beforeEach(() => {
 });
 it('shows honest availability and prevents generation without configured AI', async () => {
   mount('/quiz');
-  expect(screen.getByRole('heading', { name: 'Private AI access required.' })).toBeInTheDocument();
+  expect(screen.getByRole('heading', { name: 'AI connection unavailable.' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: /Create my quiz/ })).toBeDisabled();
   expect(screen.getByRole('option', { name: '20 questions · Coming soon' })).toBeDisabled();
   expect(screen.getByRole('option', { name: /5 questions/ })).toBeEnabled();

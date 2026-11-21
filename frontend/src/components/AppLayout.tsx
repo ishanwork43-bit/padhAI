@@ -255,7 +255,7 @@ export function AppLayout() {
               <h3>Practice with purpose</h3>
               <p>
                 {BROWSER_MODE
-                  ? 'Explore evidence and revisit your source passages. Unlock private Groq access and choose passage-sharing consent to generate answers, summaries, and quizzes.'
+                  ? 'Explore evidence and revisit your source passages. Choose passage-sharing consent to generate answers, summaries, and quizzes.'
                   : 'When AI is enabled, create quizzes from your notes. Explanations appear after you submit. Retakes use the same questions.'}
               </p>
             </section>

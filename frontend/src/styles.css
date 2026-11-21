@@ -4046,7 +4046,7 @@ kbd {
   }
 }
 
-/* Private, optional AI stays within the existing study design system. */
+/* Optional AI controls */
 .ai-generation-panel,
 .ai-builder {
   padding: clamp(20px, 3vw, 32px);

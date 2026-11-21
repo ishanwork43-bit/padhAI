@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import {
   Check,
   Database,
-  KeyRound,
   Laptop,
   Moon,
   Save,
@@ -11,7 +10,6 @@ import {
   Trash2,
 } from 'lucide-react';
 import { useStudy } from '../lib/study';
-import { useAI } from '../lib/ai-access';
 import { errorMessage, jsonRequest } from '../lib/api';
 import { bytes } from '../lib/format';
 import { useTheme } from '../lib/theme';
@@ -20,7 +18,6 @@ import { AIAvailability } from '../components/AIControls';
 import { useToast } from '../components/Toast';
 export function Settings() {
   const { workspace, refresh, invalidateNotes, reset } = useStudy(),
-    ai = useAI(),
     toast = useToast(),
     [theme, setTheme] = useTheme();
   const [name, setName] = useState(workspace.name),
@@ -28,7 +25,6 @@ export function Settings() {
     [consent, setConsent] = useState(workspace.settings.ai_consent),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(''),
-    [accessCode, setAccessCode] = useState(''),
     [action, setAction] = useState<'notes' | 'workspace' | null>(null),
     [deleting, setDeleting] = useState(false),
     [deleteError, setDeleteError] = useState('');
@@ -58,15 +54,6 @@ export function Settings() {
       setBusy(false);
     }
   }
-  async function unlock() {
-    try {
-      await ai.unlock(accessCode.trim());
-      setAccessCode('');
-      toast('Private AI unlocked for this browser session.');
-    } catch {
-      setAccessCode('');
-    }
-  }
   async function remove() {
     setDeleting(true);
     setDeleteError('');
@@ -93,7 +80,7 @@ export function Settings() {
       <SectionHeading
         eyebrow="MAKE YOURSELF AT HOME"
         title="Your space. Your preferences."
-        description="Control your study space, private AI access, and the data you choose to share."
+        description="Control your study space and the data you choose to share."
       />
       <form
         onSubmit={(e) => {
@@ -138,7 +125,7 @@ export function Settings() {
         <section id="ai" className="settings-section">
           <div className="settings-intro">
             <h2>AI & privacy</h2>
-            <p>Local search stays keyless. Groq generation is private and optional.</p>
+            <p>Local search stays keyless. Groq generation is public and optional.</p>
           </div>
           <div className="surface settings-panel">
             <div className="settings-status">
@@ -153,12 +140,12 @@ export function Settings() {
             </div>
             <div className="settings-status">
               <span className="feature-icon purple">
-                <KeyRound size={21} />
+                <ShieldCheck size={21} />
               </span>
               <div>
                 <strong>Groq explanations, summaries & quizzes</strong>
                 <p>
-                  Private access protects a limited free allowance. Your provider API key is never
+                  Anonymous visitor limits protect the shared free allowance. The provider API key is never
                   entered into this website.
                 </p>
               </div>
@@ -195,53 +182,13 @@ export function Settings() {
       </form>
       <section className="settings-section">
         <div className="settings-intro">
-          <h2>Private AI access</h2>
-          <p>This is a project invitation, separate from your Groq API key.</p>
+          <h2>AI availability</h2>
+          <p>No invitation or account needed.</p>
         </div>
         <div className="surface settings-panel">
-          {!ai.status?.authenticated ? (
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                void unlock();
-              }}
-            >
-              <div className="field">
-                <label htmlFor="private-access-code">Private access code</label>
-                <input
-                  id="private-access-code"
-                  type="password"
-                  autoComplete="off"
-                  spellCheck={false}
-                  maxLength={128}
-                  value={accessCode}
-                  onChange={(e) => setAccessCode(e.target.value)}
-                  placeholder="Enter the invitation from the project owner"
-                />
-              </div>
-              <Button type="submit" disabled={!accessCode.trim()} busy={ai.busy}>
-                <KeyRound size={16} />
-                Unlock private AI
-              </Button>
-            </form>
-          ) : (
-            <>
-              <p>
-                <Check size={16} />
-                Your private session expires {new Date(ai.status.expires_at!).toLocaleString()}.
-              </p>
-              <Button
-                variant="secondary"
-                busy={ai.busy}
-                onClick={() => void ai.lock().catch(() => {})}
-              >
-                Lock private AI
-              </Button>
-            </>
-          )}
           <AIAvailability />
           <p className="small-muted">
-            Up to 20 shared requests per UTC day, a conservative token budget, and a one-minute
+            Up to 5 requests per visitor network and 20 shared requests per UTC day, token budgets, and a one-minute
             cooldown. Large requests or Groq’s own limits may reduce availability. No automatic
             retries or unlimited AI.
           </p>

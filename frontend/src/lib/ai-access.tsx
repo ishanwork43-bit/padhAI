@@ -1,5 +1,6 @@
-import { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
+import { useLocation } from 'react-router-dom';
 import { APIError } from './api';
 export interface AIStatus {
   enabled: boolean;
@@ -14,13 +15,12 @@ export interface AIStatus {
     resets_at: string;
   };
 }
-const marker = 'padhai-private-ai-session';
-async function accessRequest(
+async function accessRequest<T = AIStatus>(
   action: string,
   method = 'GET',
   body?: unknown,
   csrf?: string,
-): Promise<AIStatus> {
+): Promise<T> {
   let response: Response;
   try {
     response = await fetch(`/api/ai?action=${action}`, {
@@ -35,7 +35,7 @@ async function accessRequest(
     throw new APIError(
       0,
       'ai_network',
-      'Private AI could not be reached. Your local search still works.',
+      'AI could not be reached. Your local search still works.',
     );
   }
   const data = await response.json().catch(() => null);
@@ -43,33 +43,29 @@ async function accessRequest(
     throw new APIError(
       response.status,
       data?.error?.code ?? 'ai_unavailable',
-      data?.error?.message ?? 'Private AI is unavailable.',
+      data?.error?.message ?? 'AI is unavailable.',
       data?.error?.retry_after,
     );
   return data;
 }
-function remembered() {
-  try {
-    return localStorage.getItem(marker) === 'yes';
-  } catch {
-    return false;
-  }
-}
-function remember(enabled: boolean) {
-  try {
-    if (enabled) localStorage.setItem(marker, 'yes');
-    else localStorage.removeItem(marker);
-  } catch {
-    /* A session still works without the optional marker. */
-  }
+function solveProof(challenge: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const worker = new Worker(new URL('./ai-proof.worker.ts', import.meta.url), { type: 'module' });
+    const finish = (error?: string, solution?: string) => {
+      clearTimeout(timer); worker.terminate();
+      if (error) reject(new Error(error)); else resolve(solution!);
+    };
+    const timer = setTimeout(() => finish('The browser check timed out. Retry the AI connection.'), 22000);
+    worker.onmessage = (event) => finish(event.data.error, event.data.solution);
+    worker.onerror = () => finish('The browser check could not run. Retry the AI connection.');
+    worker.postMessage(challenge);
+  });
 }
 interface Access {
   status: AIStatus | null;
   busy: boolean;
   error: string;
   cooldown: number;
-  unlock: (code: string) => Promise<void>;
-  lock: () => Promise<void>;
   refresh: () => Promise<void>;
   reportError: (message: string) => void;
 }
@@ -78,8 +74,6 @@ const initial: Access = {
   busy: false,
   error: '',
   cooldown: 0,
-  unlock: async () => {},
-  lock: async () => {},
   refresh: async () => {},
   reportError: () => {},
 };
@@ -90,64 +84,40 @@ export function AIProvider({ children }: { children: ReactNode }) {
     [busy, setBusy] = useState(false),
     [error, setError] = useState(''),
     [tick, setTick] = useState(Date.now());
-  const refresh = useCallback(async () => {
-    if (!remembered()) return;
-    try {
-      const value = await accessRequest('status');
-      setStatus(value);
-      if (!value.authenticated) remember(false);
-    } catch (reason) {
-      if (reason instanceof APIError && reason.status === 401) {
-        remember(false);
+  const { pathname } = useLocation();
+  const inFlight = useRef<Promise<void> | null>(null);
+  const refresh = useCallback(() => {
+    if (inFlight.current) return inFlight.current;
+    setBusy(true); setError('');
+    const pending = (async () => {
+      try {
+        let value: AIStatus;
+        try { value = await accessRequest('status'); }
+        catch (reason) {
+          if (!(reason instanceof APIError) || reason.status !== 401) throw reason;
+          const proof = await accessRequest<{ challenge: string; bits: number }>('challenge', 'POST');
+          if (proof.bits !== 16) throw new Error('This browser check is not supported.');
+          const solution = await solveProof(proof.challenge);
+          value = await accessRequest('session', 'POST', { challenge: proof.challenge, solution });
+        }
+        setStatus(value); setTick(Date.now());
+      } catch (reason) {
         setStatus(null);
-      } else setError(reason instanceof Error ? reason.message : 'AI status is unavailable.');
-    }
+        setError(reason instanceof Error ? reason.message : 'AI is unavailable.');
+      } finally { setBusy(false); inFlight.current = null; }
+    })();
+    inFlight.current = pending;
+    return pending;
   }, []);
   useEffect(() => {
-    void refresh();
-    const listener = (e: StorageEvent) => {
-      if (e.key === marker) {
-        if (!remembered()) setStatus(null);
-        else void refresh();
-      }
-    };
-    window.addEventListener('storage', listener);
-    return () => window.removeEventListener('storage', listener);
-  }, [refresh]);
+    if (['/ask', '/summary', '/quiz', '/settings'].includes(pathname)) void refresh();
+  }, [pathname, refresh]);
   const next = status?.quota?.next_request_at ?? 0;
   useEffect(() => {
     if (next <= Date.now()) return;
     const id = setInterval(() => setTick(Date.now()), 1000);
     return () => clearInterval(id);
   }, [next]);
-  const unlock = async (code: string) => {
-    setBusy(true);
-    setError('');
-    try {
-      setStatus(await accessRequest('session', 'POST', { access_code: code }));
-      remember(true);
-      setTick(Date.now());
-    } catch (reason) {
-      setError(reason instanceof Error ? reason.message : 'Unlock failed.');
-      throw reason;
-    } finally {
-      setBusy(false);
-    }
-  };
-  const lock = async () => {
-    setBusy(true);
-    setError('');
-    try {
-      await accessRequest('session', 'DELETE', undefined, status?.csrf);
-      remember(false);
-      setStatus(null);
-    } catch (reason) {
-      setError(reason instanceof Error ? reason.message : 'Sign out failed.');
-      throw reason;
-    } finally {
-      setBusy(false);
-    }
-  };
   return (
     <Context.Provider
       value={{
@@ -155,8 +125,6 @@ export function AIProvider({ children }: { children: ReactNode }) {
         busy,
         error,
         cooldown: Math.max(0, Math.ceil((next - Math.max(tick, Date.now())) / 1000)),
-        unlock,
-        lock,
         refresh,
         reportError: setError,
       }}

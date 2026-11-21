@@ -182,7 +182,7 @@ async function startAIJob(kind: 'answer' | 'summary' | 'quiz', body: Record<stri
         403,
       );
     if (typeof body.csrf !== 'string' || !body.csrf)
-      throw new LocalError('locked', 'Unlock private AI in Settings first.', 401);
+      throw new LocalError('locked', 'Retry the AI connection in Settings first.', 401);
     const context = prepareContext(state, kind, body);
     const job: Job = {
       id: crypto.randomUUID(),

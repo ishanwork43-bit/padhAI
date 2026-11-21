@@ -1,10 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
-import { BookOpen, LockKeyhole, ShieldCheck } from 'lucide-react';
+import { BookOpen, ShieldCheck } from 'lucide-react';
 import { useAI } from '../lib/ai-access';
 import { useStudy } from '../lib/study';
 import { jsonRequest } from '../lib/api';
 import type { PreparedContext } from '../browser/ai-context';
-import { Badge, ButtonLink, ErrorNotice } from './ui';
+import { Badge, Button, ButtonLink, ErrorNotice } from './ui';
 export function AIAvailability() {
   const ai = useAI(),
     { workspace } = useStudy();
@@ -13,29 +13,19 @@ export function AIAvailability() {
       <div className="ai-status-line">
         <Badge tone={ai.status?.authenticated ? 'green' : 'purple'}>
           <ShieldCheck size={13} />
-          {ai.status?.authenticated ? 'Private Groq AI unlocked' : 'Private Groq AI'}
+          {ai.busy ? 'Checking AI connection…' : ai.status?.authenticated ? 'Groq AI ready' : 'Groq AI'}
         </Badge>
         {ai.status?.quota && (
-          <span>{ai.status.quota.remaining} requests left today · shared free allowance</span>
+          <span>{ai.status.quota.remaining} requests available today · visitor and shared limits</span>
         )}
       </div>
-      {!ai.status?.authenticated ? (
-        <p>
-          <LockKeyhole size={15} />
-          AI is invite-only to protect the free allowance.{' '}
-          <ButtonLink to="/settings#ai" variant="ghost">
-            Unlock in Settings
-          </ButtonLink>{' '}
-          Local search stays available to everyone.
-        </p>
-      ) : !workspace.settings.ai_consent ? (
+      {!workspace.settings.ai_consent ? (
         <p>
           Choose whether to send selected excerpts to Groq in{' '}
-          <ButtonLink to="/settings#ai" variant="ghost">
-            AI & privacy settings
-          </ButtonLink>
-          .
+          <ButtonLink to="/settings#ai" variant="ghost">AI & privacy settings</ButtonLink>.
         </p>
+      ) : !ai.status?.authenticated ? (
+        <p>{ai.busy ? 'Preparing anonymous AI access. No account or invitation is needed.' : 'AI is temporarily unavailable. Local search and saved results still work.'}</p>
       ) : ai.cooldown > 0 ? (
         <p>
           Next generation available in {ai.cooldown}s. Retakes and local search use no AI quota.
@@ -53,6 +43,9 @@ export function AIAvailability() {
         </p>
       )}
       {ai.error && <ErrorNotice message={ai.error} />}
+      {!ai.busy && (ai.error || !ai.status?.authenticated) && (
+        <Button variant="secondary" onClick={() => void ai.refresh()}>Retry AI connection</Button>
+      )}
     </div>
   );
 }

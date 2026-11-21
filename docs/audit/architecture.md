@@ -6,7 +6,7 @@
 | --------------------------------------- | ---------------------------------------------------------------------------------------- | ---------------------------------------- |
 | `frontend/src/browser/`                 | Worker-based PDF parsing, chunking, MiniLM embeddings, retrieval, and local quiz scoring | IndexedDB in the current browser profile |
 | `frontend/src/pages/` and `components/` | Notes, search, sources, summaries, quizzes, and settings                                 | Local state and the browser worker       |
-| `netlify/functions/`                    | Private access, request validation, Groq calls, and output checks                        | Security metadata in Netlify Blobs       |
+| `netlify/functions/`                    | Anonymous visitor checks, request validation, Groq calls, and output checks              | Security metadata in Netlify Blobs       |
 | `frontend/scripts/`                     | Integrity-check public model assets and prepare static hosting rules                     | Ignored build output                     |
 
 The embedding model is pinned to a revision and SHA256-checked before use. Each vector has 384 dimensions. PDF citations retain page numbers and character offsets. IndexedDB transactions and revision checks prevent old jobs from overwriting newer document state; deletion invalidates derived results across tabs.
@@ -17,9 +17,9 @@ Only reviewed excerpts and the generation request reach Groq. The Function fixes
 
 Local notes, vectors, summaries, and quizzes belong to one browser profile and origin. Another person using that profile can access them. Clearing site data, browser eviction, or switching origins can remove access; there is no backup or cloud sync. Deleting a note clears associated generated results locally, but cannot recall excerpts already sent to Groq. Provider and hosting policies still apply. Locally stored quiz answers are inspectable, so this is a practice tool rather than an exam system.
 
-Groq credentials exist only in the Function runtime. A high-entropy invitation creates an eight-hour HttpOnly/Secure/SameSite session. Mutations require exact-origin and session-bound CSRF checks; generation also requires consent. Requests have size, context, token, and time limits. Application code neither logs nor persists study content on the server.
+Groq credentials exist only in the Function runtime. A signed, single-use proof-of-work challenge creates an anonymous HttpOnly/Secure/SameSite session for up to eight hours. No invitation is needed. Sessions bind to a keyed daily hash of the Netlify-trusted client network (IPv6 /64); application code does not store raw IPs. Mutations require exact-origin and session-bound CSRF checks; generation also requires consent. Requests have size, context, token, and time limits. Application code neither logs nor persists study content on the server.
 
-Strongly consistent Netlify Blobs and conditional ETag writes enforce shared quotas across Function instances. Daily request/token budgets, an in-flight lease, and request IDs prevent concurrent overspending and duplicate generation. Missing configuration or storage fails closed. Authentication protects provider access, but cannot prevent all public Function invocation abuse or hosting-quota exhaustion.
+Strongly consistent Netlify Blobs and conditional ETag writes enforce shared quotas across Function instances. Global and per-network daily request/token budgets, bounded session-setup limits, an in-flight lease, and request IDs prevent concurrent overspending and duplicate generation. Missing configuration or storage fails closed. Proof of work slows basic automation but does not identify humans. Network rotation and distributed bots can exhaust shared allowances; shared networks can cause legitimate users to share limits. Hosting-quota exhaustion remains possible. See [deployment limits](../deployment.md).
 
 Reference: [Netlify Blobs consistency and conditional writes](https://docs.netlify.com/build/data-and-storage/netlify-blobs/).
 

@@ -4,9 +4,11 @@
 
 PadhAI helps students find explanations in their own study notes. Import a PDF, TXT, or Markdown file, search by meaning, and open the passage behind each result. Optional Groq generation turns selected excerpts into answers, summaries, and practice questions.
 
-[Open the preview](https://groq-preview--padhai-ishan.netlify.app) — local search is public; AI generation requires a private invitation from the project owner.
+[Open the preview](https://groq-preview--padhai-ishan.netlify.app) — notes, search, and AI tools are public. No invitation or account is required.
 
 ![PadhAI summarizing biology notes with source references](docs/screenshots/summary.png)
+
+Screenshot from the earlier preview; AI access is now public.
 
 ## Features
 
@@ -14,7 +16,7 @@ PadhAI helps students find explanations in their own study notes. Import a PDF, 
 - Notes and search vectors stored locally in IndexedDB, with document deletion and persistence after refresh.
 - Source-linked AI answers, short summaries, and key takeaways after explicit excerpt-sharing consent.
 - Five- and ten-question quizzes with scoring, explanations, and saved attempts. Twenty questions is disabled as **Coming soon**.
-- Private AI access, server-side credentials, request limits, and shared quotas enforced by Netlify Functions.
+- Anonymous visitor protection, server-side credentials, request limits, and shared quotas enforced by Netlify Functions.
 
 ## How it works
 
@@ -23,7 +25,7 @@ flowchart LR
   Notes[PDF / TXT / Markdown] --> Browser[Browser workers: parse and embed]
   Browser --> Local[IndexedDB and local search]
   Local --> Sources[Passages and page citations]
-  Sources -->|Private access and consent| API[Netlify Function]
+  Sources -->|Browser check and consent| API[Netlify Function]
   API --> Groq[Groq generation]
   Groq --> Check[Validate source quotes and return results]
 ```
@@ -51,17 +53,17 @@ Open `http://localhost:5173`. Local search needs no API key. Startup prepares th
 
 - Notes belong to this browser profile and site address. Clearing browser data can remove them; keep the original files. There is no cloud sync or backup.
 - The embedding model is English-focused. Scanned PDFs needing OCR and encrypted PDFs are unsupported.
-- AI access is private and subject to shared daily and provider quotas. Free hosting can also reach its limits.
+- AI has per-network and shared daily quotas. A browser proof-of-work check slows basic bots; shared networks may share limits. Distributed abuse can still exhaust the free allowance.
 - Real checks passed for English short answers, short summaries, key takeaways, and 5/10-question quizzes. Broader Hinglish/detailed generation and live UI retakes remain unverified. See the [test results and known issues](docs/verification.md).
 
 ## Next steps
 
-Improve Hinglish retrieval evaluation, add local export/import, and resolve twenty-question generation before enabling it. Public AI access would need stronger per-user controls.
+Improve Hinglish retrieval evaluation, add local export/import, and resolve twenty-question generation before enabling it. Evaluate stronger abuse protection as public usage grows.
 
 ## Engineering notes
 
 - [Architecture, privacy, and repository audit](docs/audit/architecture.md)
-- [Deployment and private access](docs/deployment.md)
+- [Deployment and public access](docs/deployment.md)
 - [Tests and verification](docs/verification.md)
 - Preserved editions: [React + FastAPI](https://github.com/ishanwork43-bit/padhAI/tree/feat/integrated-platform) · [browser-only](https://github.com/ishanwork43-bit/padhAI/tree/feat/browser-only-padhai)
 

@@ -244,7 +244,7 @@ export function Dashboard() {
               description: workspace.capabilities.ai_available
                 ? 'Create a quiz from your notes'
                 : BROWSER_MODE
-                  ? 'Unlock private AI to create quizzes'
+                  ? 'Create quizzes with public AI'
                   : 'AI quizzes are optional',
               done: workspace.stats.completed_quizzes > 0,
               to: '/quiz',
