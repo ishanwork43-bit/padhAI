@@ -1,149 +1,70 @@
-# Final verification
+# Verification and remaining issues
 
-The portfolio MVP was checked in the supplied Linux environment with Python
-3.12.14, Streamlit 1.67.0, PyMuPDF 1.28.2, sentence-transformers 5.7.0,
-PyTorch 2.15.0+cpu, Chroma 1.5.9, OpenAI SDK 2.54.0, and pytest 9.2.0.
+## Public AI preview — 2026-11-21
 
-## Automated checks
+Invitations and unlock controls have been replaced by automatic anonymous sessions. The API now enforces per-network limits alongside the existing shared daily counters. Twenty-question generation remains disabled in the UI and is also rejected by the public API.
 
-- `python -m pytest -q`: **523 passed**.
-- `python -m pip check`: no broken requirements.
-- Ordinary tests require neither a paid API call nor an embedding-model download.
-  They use fixed test vectors/tiny fake models, real in-memory Chroma, SDK HTTP
-  fixtures, and Streamlit AppTest.
-- Coverage includes extraction/encoding/PDF failures, byte/page/character limits,
-  metadata/chunk offsets, model/vector validation, workspace isolation, atomic
-  index replacement, deletion, query limits, and stale-result invalidation.
-- Answer and quiz tests cover strict schemas, duplicate JSON keys, source/quote
-  mapping, fabricated references, unsafe Unicode, refusal/truncation, bounded
-  context, API failures, and explicitly triggered retries.
-- Quiz checks cover 5/10/20 questions, all difficulties, four distinct options,
-  strict answer indexes, unanswered scoring, frozen submissions, retakes, and
-  resets after settings or note changes.
-- Evaluation tests verify metric denominators, partial multi-document recall,
-  document deduplication, invalid labels, dataset fingerprints, and the explicit
-  distinction between injected test embeddings and actual-model reports.
+Local verification: 23 mocked Function/security tests cover anonymous access, network binding, spoofed forwarding headers, cookie resets, challenge signature/work/expiry/origin/replay, durable concurrent quotas, migration of existing shared counters, visitor token budgets, CSRF, consent, and provider failures. Six focused frontend tests passed. The TypeScript/Vite build passed.
 
-## Release preparation
+One focused local Chromium workflow passed using the real browser proof worker and Function handler with in-memory test storage and a mocked provider: automatic access, no invitation field, consent initially off, saving consent, TXT import, summary generation, persistence after refresh without a second session, and the disabled twenty-question option. External network requests were blocked in this test. No real Groq request or hosted application test was made for this change; provider availability remains subject to the existing runtime secret and free quota.
 
-Version 0.1.0 was prepared locally. The focused code review found no release-blocking
-issue in the reviewed validation/state/retrieval paths. This is not a guarantee
-that all defects have been found.
+See [public-access limits and residual risks](deployment.md). Earlier private-access results below are historical evidence, not a description of the current access flow.
 
-The full suite includes 57 release-builder tests for allowlisting, secret/cache
-exclusion, version validation, traversal/symlink handling, reproducible ZIP bytes,
-checksums, missing files, and failed output writes. The original v0.1.0 source manifest lists 61
-reviewed project files; the current main-branch manifest adds the hosting files. The archive checksum, ZIP contents, extracted application
-startup/navigation, and an identical second build were checked locally.
+## Documentation and cleanup checks — 2026-11-21
 
-The original release preparation was local. Subsequently, the source and
-`v0.1.0` tag were pushed to the public GitHub repository at the owner's request.
-GitHub Actions passed for both Python 3.11 and 3.12 on commit `d42b40b` and the
-Community Cloud entry-point commit `d8bb2b0`. See [deployment](deployment.md). Archive bytes are reproducible
-for identical source bytes with the same Python/zlib versions; the checksum is
-an integrity check rather than a signed publisher identity.
+The static-hosting regression test passed after removal of the inactive external proxy path (one current routing test replaces twelve tests covering both editions). TypeScript passed with unused-local and unused-parameter checks enabled. Asset preparation passed with network access blocked, using cached files and their pinned hashes. Script syntax, targeted formatting, local Markdown links, and whitespace checks passed.
 
-## Real local-model evaluation
+The current source and existing public bundle passed the credential-pattern scan. A separate filename/path/contact-data review found no suspected exposure. Security Functions, browser processing, dependency locks, licenses, and attribution are unchanged. No full build, browser suite, real Groq request, or deployment was run for this cleanup; previous results below remain historical evidence.
 
-The pinned all-MiniLM-L6-v2 model produced 384-dimensional embeddings. The fixed
-8-document, 20-question evaluation completed using cached weights with
-`HF_HUB_OFFLINE=1` and CPU inference. Of those questions, 18 are answerable and
-2 have no relevant corpus document.
+## Manual-review UI update — 2026-11-21
 
-| K (unique documents) | Hit@K | Macro Recall@K |
-| --- | --- | --- |
-| 1 | 100.0% | 94.4% |
-| 3 | 100.0% | 100.0% |
-| 5 | 100.0% | 100.0% |
+The 20-question option is now disabled and labeled “Coming soon”. Five- and ten-question options remain selectable. Only the quiz UI, its existing focused test, and explanatory documentation changed; generation and security code remain unchanged. All four local quiz tests passed, including disabled-option selection checks. The TypeScript/Vite build also passed. No Groq API calls were made for this update. Production remains unchanged.
 
-Unanswerable false positives: **0/2** at threshold **0.25**. The corpus/labels were
-frozen before this run and were not tuned afterward. This small, hand-authored
-learning dataset is not a held-out benchmark or a general accuracy estimate.
-See [the measured report](retrieval-results.md) and
-[full results JSON](../evaluation/results.json) for methodology, model revision,
-dataset hash, package versions, and every query ranking.
+## Focused quiz check — 2026-11-21
 
-The three-question real-model smoke check also passed, including a DBMS PDF page
-match, a cloud-services text match, and one unrelated query with no returned hit.
+The original 20-question failures reached output validation but returned a question count other than 20. A strict-schema candidate added exact array bounds while retaining an empty insufficient-evidence response. It passed local fixtures but **did not pass the one permitted real Groq check**.
 
-## Browser checks
+- 19 focused Function/security tests passed before deploying the candidate, including five new quiz regression tests. These use explicit mocked provider responses, not real generation.
+- The source/public-bundle credential-pattern scan and whitespace checks passed.
+- Exactly **one** live 20-question request was made for this verification, against preview deploy `6b011d3ae082b93a67b04d36`, candidate commit `b226609`.
+- Authentication succeeded. Generation returned HTTP **503**, error **`provider_model`**: “The configured model or response format is unavailable for this account. The owner needs to check Groq access.”
+- The Function maps Groq HTTP 400/404/422 to that safe error. Raw provider details were not captured. Schema incompatibility is suspected after the change, but the precise upstream reason is **not confirmed**.
+- No real retry or additional generation test was performed. Quotas were not reset or bypassed.
+- The candidate schema was rolled back to the previously verified format to protect 5/10-question quizzes. One corrective preview deployment was necessary. All five focused quiz regression tests passed again after rollback; no frontend rebuild or full browser rerun was needed.
+- Useful retained changes: positive 20-question validation fixtures, incomplete/oversized response rejection, duplicate/evidence checks, no-retry coverage, and safe errors reporting actual versus requested question counts.
 
-Playwright with system Chromium exercised the actual application for:
+**Remaining blocker:** reliable real 20-question generation is unresolved. The preview rejects incomplete or unsupported quizzes rather than saving them. Local mock success is not evidence that Groq successfully generated 20 questions. Future work should first establish a provider-compatible count constraint locally; another real request requires a separate verification allowance.
 
-- Mixed valid/empty/corrupt uploads, duplicates, PDF page previews, and removal.
-- Real local indexing/search, source/page metadata, unrelated and empty queries,
-  separate sessions, and deletion followed by rebuilding from remaining notes.
-- Keyless answer/quiz states and the current chat exchange.
+## Previously completed checks — 2026-11-20
 
-Separate browser-only harnesses retained real application logic and validation
-while simulating provider replies. They checked answer/citation rendering and
-failure fallbacks; quiz answers hidden until submission; partial 2/5 scoring with
-one unanswered choice; frozen controls; an all-unanswered 0/5 retake; parameter
-selection; and malformed-quiz rejection without exposing partial questions.
-Harnesses are not part of the delivered app. A prior 390-pixel viewport check found
-no horizontal document overflow; this is not complete mobile accessibility testing.
+- 14 Function/security tests passed before the five new quiz tests. Coverage includes private access, HttpOnly cookies/CSRF, revocation, expiry, input limits, missing credentials, simulated wrong provider credentials/429s/network failures, durable concurrent quotas, evidence validation, and duplicate MCQs.
+- 18 frontend unit tests and 12 hosting tests passed.
+- All five real MiniLM browser regression scenarios passed both locally and on the HTTPS preview: PDF/TXT/Markdown imports, semantic retrieval, page citations, persistence, isolation, deletion, mobile viewports, invalid files, model recovery, and cancellation.
+- TypeScript/Vite production build and public-bundle scan passed. Mobile Summary/Quiz/Settings checks passed at widths 320, 390, and 768 pixels.
+- Actual Netlify/Groq calls succeeded for an English short answer, a short summary, key takeaways, five-question generation, and ten-question medium-difficulty generation.
+- Actual UI checks passed for private unlock, consent, note import, five MCQs, local scoring, score persistence, summary generation, source references, and summary persistence. Screenshots contain public study fixtures only.
+- CI passed for `b129756`: [run 44769193708](https://github.com/ishanwork43-bit/padhAI/actions/runs/44769193708). This is baseline evidence, not a claim about later commits.
 
-## What remains unverified
+Broader successful Hinglish/detailed generation, actual UI retakes, and reliable 20-question generation remain unverified. Fault injection and quota-exhaustion checks use mocks to avoid spending live allowance or modifying the real provider key. Source checks reduce fabricated evidence; they do not prove logical entailment or eliminate prompt injection.
 
-No real OpenAI API key was configured, so **live answer and quiz generation were
-not tested**. Offline SDK fixtures verify request serialization and error handling,
-not live model/service quality. Exact quote/source checks cannot establish logical
-support, uniquely correct quiz choices, appropriate difficulty, or prompt-injection
-immunity.
+## Deployment scope
 
-macOS setup instructions were written but not executed on a Mac. GitHub Actions
-passed on Python 3.11/3.12 for the commits recorded above. The application
-has no production-security claim, authenticated accounts, durable notes storage,
-or hard resource sandbox for native PDF parsing.
+Preview: https://groq-preview--padhai-ishan.netlify.app
 
+Current public preview deploy: `6b012381ce02f27ae00cc288`. The earlier UI deploy `6b011ed1e8fcde8d2d90e666`, commit `8471258`, disabled the 20-question option. The preceding corrective deploy `6b011d902e88485aca134e2e` restored the provider schema; neither update made additional live generation requests.
 
-## Hosting preparation checks
+Production remains `6af795ace4749b2373c80036`, confirmed after the candidate deployment on 2026-11-21. No production deployment, main merge, branch deletion, paid upgrade, or history rewrite was performed. Both earlier architecture branches remain preserved.
 
-The Community Cloud entry point rendered successfully with Streamlit AppTest.
-Its CPU requirements resolved against the existing tested environment; a fresh
-Community Cloud installation still needs to be checked after deployment.
-The landing page passed 17 Node tests for URL validation, pending/linked states,
-allowlisted output, and preservation of a prior build after invalid input.
-Playwright checked desktop and 390/320-pixel widths, internal navigation, FAQ
-expansion, sample downloads, and absence of a broken app launch link. Hosted
-Python behavior is not established by these static-page checks.
+## Reproduce local checks
 
+```bash
+npm test                                      # mocked Function/security tests
+npm --prefix frontend test                    # frontend unit tests
+npm --prefix frontend run test:hosting         # static routing rules
+npm --prefix frontend run build:netlify
+npm run test:security                         # source and built-asset pattern scan
+```
 
-The Netlify production deployment reached `ready` at
-https://padhai-ishan.netlify.app. Live checks confirmed HTTP 200 and matching
-build bytes for the page, stylesheet, and sample downloads; an unknown path
-returned the custom 404. Its deployed response includes the configured headers.
-Live browser checks passed at 1440, 390, and 320 pixels, including FAQ expansion
-and the explicit pending app-launch state. CI also passed all three jobs on
-commit `3d468a5` (Python 3.11/3.12 and the 17-test Node landing build).
-At that initial deployment, the Streamlit app remained unverified and unlinked.
+For browser workflow changes, install Playwright Chromium, start `npm --prefix frontend run preview -- --port 4176 --strictPort`, then run `E2E_URL=http://localhost:4176 npm --prefix frontend run test:e2e` in another terminal. These tests use the real local embedding model. They do not call Groq. Provider failures and quotas use explicit mocks in the Function tests.
 
-## Connected production app — 2026-11-14
-
-The Netlify frontend now opens `https://padhaistudy.streamlit.app/` from both
-**Open PadhAI** buttons. The public destination is persisted in `netlify.toml`.
-The 17 existing Node checks and Netlify's local production build passed. Deployment
-`6af795ace4749b2373c80036` was checked against the intended seven-file publish set;
-every deployed file matched its local build bytes, and the configured response
-headers remained active. Requests for `.env`, Streamlit secrets, local Netlify
-state, and the build configuration did not serve those files.
-
-Live browser checks covered both launch buttons, the new-tab destination and
-absent `window.opener`, the FAQ, sample downloads, desktop and 390/320-pixel
-landing layouts, and the hosted app at mobile width. No page exceptions or
-horizontal document overflow were found in these checks.
-
-The actual Streamlit application was tested through its hosted app frame:
-
-- PDF/TXT upload, extracted-text preview, and duplicate-file handling.
-- Real embedding-model indexing and semantic retrieval of the bundled samples.
-- DBMS query matched the PDF on page 1; the IaaS query matched the cloud text.
-- An unrelated question returned the no-evidence state; an empty question was rejected.
-- Quiz navigation and disabled generation controls with no configured OpenAI key.
-- Clearing the test notes invalidated search; a fresh launch contained no prior notes.
-
-Tests used only the public sample documents and cleared their own session.
-The app reports no OpenAI key, so live AI answers and quiz generation remain
-unverified and disabled. No paid calls were made, and no credentials were added
-to the frontend or repository. These checks validate the exercised integration
-and workflows; they do not constitute a general security or accessibility audit.
+The [quiz screenshot](screenshots/quiz.png) records an actual five-question scoring check with public study notes. The README summary screenshot is also from the running application.
