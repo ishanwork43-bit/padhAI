@@ -304,7 +304,7 @@ export function Quiz() {
                 >
                   <option value={5}>5 questions · a quick check-in</option>
                   <option value={10}>10 questions · a deeper dive</option>
-                  <option value={20}>20 questions · a full practice</option>
+                  <option value={20} disabled>20 questions · Coming soon</option>
                 </select>
               </div>
               <fieldset className="difficulty-field">

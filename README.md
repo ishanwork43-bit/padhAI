@@ -14,7 +14,7 @@ The Groq preview is under verification. Production has not been changed. Local s
 - Builds real 384-dimensional embeddings using a SHA-pinned quantized MiniLM model through Transformers.js.
 - Searches by meaning and opens original passages with PDF page numbers and exact text offsets.
 - Generates English or Hinglish answers, short/detailed summaries and key takeaways from reviewed excerpts after explicit consent.
-- Creates MCQ quizzes with difficulty controls, local scoring, explanations, citations, and free retakes. Five- and ten-question generation passed real checks; the twenty-question option remains experimental and can fail validation. See [verification](docs/verification.md).
+- Creates MCQ quizzes with difficulty controls, local scoring, explanations, citations, and free retakes. Five- and ten-question generation passed real checks; the twenty-question option is temporarily disabled and labeled “Coming soon”. See [verification](docs/verification.md).
 - Saves notes, search indexes, summaries, and quizzes in IndexedDB. Deletion clears derived results and revision guards reject stale in-flight work.
 
 AI source-ID and quote checks reject fabricated evidence; quiz validation also checks options, duplicates, and correct-answer evidence. These checks do not prove every generated inference. Review the sources before relying on a result.

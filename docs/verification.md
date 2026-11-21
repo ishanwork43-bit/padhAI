@@ -1,5 +1,9 @@
 # Verification and remaining issues
 
+## Manual-review UI update — 2026-11-21
+
+The 20-question option is now disabled and labeled “Coming soon”. Five- and ten-question options remain selectable. Only the quiz UI, its existing focused test, and explanatory documentation changed; generation and security code remain unchanged. All four local quiz tests passed, including disabled-option selection checks. The TypeScript/Vite build also passed. No Groq API calls were made for this update. Production remains unchanged.
+
 ## Focused quiz check — 2026-11-21
 
 The original 20-question failures reached output validation but returned a question count other than 20. A strict-schema candidate added exact array bounds while retaining an empty insufficient-evidence response. It passed local fixtures but **did not pass the one permitted real Groq check**.

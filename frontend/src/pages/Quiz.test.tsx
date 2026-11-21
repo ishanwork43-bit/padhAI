@@ -63,6 +63,15 @@ it('shows honest availability and prevents generation without configured AI', as
   mount('/quiz');
   expect(screen.getByRole('heading', { name: 'Private AI access required.' })).toBeInTheDocument();
   expect(screen.getByRole('button', { name: /Create my quiz/ })).toBeDisabled();
+  expect(screen.getByRole('option', { name: '20 questions · Coming soon' })).toBeDisabled();
+  expect(screen.getByRole('option', { name: /5 questions/ })).toBeEnabled();
+  expect(screen.getByRole('option', { name: /10 questions/ })).toBeEnabled();
+  const count = screen.getByRole('combobox', { name: 'Questions' });
+  expect(count).toHaveValue('5');
+  await userEvent.selectOptions(count, '10');
+  expect(count).toHaveValue('10');
+  await userEvent.selectOptions(count, '20');
+  expect(count).toHaveValue('10');
   expect(study.startJob).not.toHaveBeenCalled();
 });
 it('submits choices to the local engine and reveals only returned grades and explanations', async () => {
