@@ -1,5 +1,11 @@
 # Verification and remaining issues
 
+## Documentation and cleanup checks — 2026-11-21
+
+The static-hosting regression test passed after removal of the inactive external proxy path (one current routing test replaces twelve tests covering both editions). TypeScript passed with unused-local and unused-parameter checks enabled. Asset preparation passed with network access blocked, using cached files and their pinned hashes. Script syntax, targeted formatting, local Markdown links, and whitespace checks passed.
+
+The current source and existing public bundle passed the credential-pattern scan. A separate filename/path/contact-data review found no suspected exposure. Security Functions, browser processing, dependency locks, licenses, and attribution are unchanged. No full build, browser suite, real Groq request, or deployment was run for this cleanup; previous results below remain historical evidence.
+
 ## Manual-review UI update — 2026-11-21
 
 The 20-question option is now disabled and labeled “Coming soon”. Five- and ten-question options remain selectable. Only the quiz UI, its existing focused test, and explanatory documentation changed; generation and security code remain unchanged. All four local quiz tests passed, including disabled-option selection checks. The TypeScript/Vite build also passed. No Groq API calls were made for this update. Production remains unchanged.
@@ -35,6 +41,20 @@ Broader successful Hinglish/detailed generation, actual UI retakes, and reliable
 
 Preview: https://groq-preview--padhai-ishan.netlify.app
 
-Corrective preview deploy: `6b011d902e88485aca134e2e` (restored provider schema; no further live generation requests).
+Current preview deploy: `6b011ed1e8fcde8d2d90e666`, UI commit `8471258` (20-question option disabled). The preceding corrective deploy `6b011d902e88485aca134e2e` restored the provider schema; neither update made additional live generation requests.
 
 Production remains `6af795ace4749b2373c80036`, confirmed after the candidate deployment on 2026-11-21. No production deployment, main merge, branch deletion, paid upgrade, or history rewrite was performed. Both earlier architecture branches remain preserved.
+
+## Reproduce local checks
+
+```bash
+npm test                                      # mocked Function/security tests
+npm --prefix frontend test                    # frontend unit tests
+npm --prefix frontend run test:hosting         # static routing rules
+npm --prefix frontend run build:netlify
+npm run test:security                         # source and built-asset pattern scan
+```
+
+For browser workflow changes, install Playwright Chromium, start `npm --prefix frontend run preview -- --port 4176 --strictPort`, then run `E2E_URL=http://localhost:4176 npm --prefix frontend run test:e2e` in another terminal. These tests use the real local embedding model. They do not call Groq. Provider failures and quotas use explicit mocks in the Function tests.
+
+The [quiz screenshot](screenshots/quiz.png) records an actual five-question scoring check with public study notes. The README summary screenshot is also from the running application.

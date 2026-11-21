@@ -1,15 +1,40 @@
 # Preview deployment and private AI
 
-Build with Node 24 using `npm ci`, `npm --prefix frontend ci`, and `npm --prefix frontend run build:netlify`. Publish `frontend/dist` and bundle `netlify/functions`. All provider secrets belong only in the Function runtime, never in a frontend environment file or a public build.
+## Build and hosting
 
-Runtime settings:
-- `GROQ_API_KEY`: existing Groq secret, available to deployed Functions.
-- `PADHAI_AI_ENABLED=true`: explicit enable switch.
-- `PADHAI_AI_ACCESS_HASH`: SHA256 of a cryptographically random private invitation. Share the invitation privately; never commit it.
-- `PADHAI_AI_SESSION_SECRET`: an independent cryptographically random base64url secret of at least 43 characters.
+Use Node.js 24:
 
-Missing settings disable generation. The browser continues to offer local search. Private access expires after eight hours and can be revoked by signing out or rotating the signing secret. Site-wide Blobs maintain atomic quotas; do not replace this with process-memory limits or reset counters to bypass limits.
+```bash
+npm ci
+npm --prefix frontend ci
+npm --prefix frontend run build:netlify
+```
 
-For a manually built preview, use Netlify CLI with `--no-build`, `--dir frontend/dist`, `--functions netlify/functions`, and a dedicated `--alias groq-preview`. Deployment-only secret overrides can provision the private invitation hash and signing secret without changing production settings. The existing provider key is inherited by the deployed Function; verify its actual runtime behavior without reading its value. CLI `--context` requires a build and should be used only with an actual Netlify build. Never print secret arguments or diagnostic environment dumps.
+Netlify publishes `frontend/dist` and bundles `netlify/functions`. The non-forced SPA fallback handles application routes; `/api/ai` belongs to the Function. This branch has no external FastAPI proxy.
 
-This task authorizes previews only. Do not use `--prod`, merge into main, delete branches, enable paid services, or rewrite history. Before any later production change, verify actual AI answers/summaries/quizzes, quotas, citations, storage, mobile layouts, and build scanning; record the tested commit and immutable deploy. Obtain explicit production authorization, retain the previous deploy, and verify after promotion. Preview and production have separate local libraries.
+For a manually built preview, use Netlify CLI with `--no-build`, `--dir frontend/dist`, `--functions netlify/functions`, and a dedicated preview alias. CLI `--context` requires an actual Netlify build. Keep the tested commit and deploy ID in the release record. The current review URL is https://groq-preview--padhai-ishan.netlify.app.
+
+## Runtime secrets
+
+Configure these only for the Netlify Function runtime:
+
+| Setting                    | Purpose                                                             |
+| -------------------------- | ------------------------------------------------------------------- |
+| `GROQ_API_KEY`             | Provider credential                                                 |
+| `PADHAI_AI_ENABLED=true`   | Explicit generation enable switch                                   |
+| `PADHAI_AI_ACCESS_HASH`    | SHA256 of a cryptographically random private invitation             |
+| `PADHAI_AI_SESSION_SECRET` | Independent random base64url signing secret, at least 43 characters |
+
+Share invitations privately. Never put secrets in frontend code, `VITE_` variables, public build artifacts, screenshots, or logs. `.env.example` lists names only. Deployment-only secret overrides can configure a preview without changing production settings; do not print CLI secret arguments or environment dumps. Missing settings disable generation while local search remains available.
+
+## Private access and quotas
+
+In Settings, enter the owner's private invitation and select **Unlock private AI**. Review excerpt-sharing consent and save preferences before generating. An invitation is not a Groq API key. Sessions expire after eight hours; locking revokes the current session, and rotating the signing secret invalidates existing sessions.
+
+Defaults are 20 shared requests per UTC day, a conservative 180,000-token reservation budget, and a one-minute cooldown. Large requests may exhaust the token budget first. Failed provider requests consume reservations; there are no automatic provider retries. Do not reset the durable Blobs counters to bypass quotas.
+
+Groq and Netlify Free limits also apply. Public traffic can exhaust hosting allowance even with private generation. No paid upgrade or unlimited-usage guarantee is included. See [architecture and privacy](audit/architecture.md) for data retention and security boundaries.
+
+## Production review
+
+Production is unchanged; the current release is a preview for manual review. Before promotion, review the [verification record](verification.md), obtain owner approval, retain the previous deploy, and check the promoted application. Preview and production origins have separate IndexedDB libraries. Do not merge, promote, enable paid services, or delete preserved branches as part of documentation maintenance.

@@ -17,7 +17,6 @@ import {
   ShieldCheck,
   Sprout,
   FileText,
-  X,
 } from 'lucide-react';
 import { useStudy } from '../lib/study';
 import { errorMessage, jsonRequest } from '../lib/api';

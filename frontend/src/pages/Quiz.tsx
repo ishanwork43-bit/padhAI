@@ -69,7 +69,7 @@ export function Quiz() {
     setError('');
     setConfirm(false);
   }, [quiz?.id, quiz?.attempt_number, quiz?.submitted]);
-  // Draft choices stay in memory only; submitted attempts are stored by the server.
+  // Warn before discarding draft choices; submitted attempts persist in IndexedDB.
   useEffect(() => {
     if (!quiz || quiz.submitted || !answers.some((x) => x !== null)) return;
     const warn = (event: BeforeUnloadEvent) => {
