@@ -1,17 +1,36 @@
-# Verification in progress
+# Verification and remaining issues
 
-Observed on 2026-11-20:
+## Focused quiz check — 2026-11-21
 
-- 14 Function/security tests passed using explicit test-only provider fixtures. Coverage includes unauthorized access, cookies/CSRF, revocation, expiry, input size, absent credentials, wrong provider credentials, 429s, network/malformed output, durable concurrent quotas, evidence validation, and duplicate MCQs.
-- 21 frontend/unit tests passed, including bounded local AI context, exact local evidence matching, scoring, original text/IndexedDB checks, and retained quiz interaction tests.
-- All 5 real-model browser regression scenarios passed locally: PDF/TXT/Markdown, actual MiniLM embeddings, page citations, persistence, isolation, deletion, mobile viewports, invalid files, model recovery, and cancellation.
-- Production TypeScript/Vite build passed.
-- An actual private request through the deployed Netlify Function returned HTTP 200 with a Groq-generated, source-checked answer from `openai/gpt-oss-120b`. No provider key was read or printed. Private login and the real Netlify Blobs store also succeeded.
+The original 20-question failures reached output validation but returned a question count other than 20. A strict-schema candidate added exact array bounds while retaining an empty insufficient-evidence response. It passed local fixtures but **did not pass the one permitted real Groq check**.
 
-Actual live UI checks also passed for five-question generation, local scoring, score persistence, summary generation, source references, and summary persistence. Screenshots use public study fixtures only.
+- 19 focused Function/security tests passed before deploying the candidate, including five new quiz regression tests. These use explicit mocked provider responses, not real generation.
+- The source/public-bundle credential-pattern scan and whitespace checks passed.
+- Exactly **one** live 20-question request was made for this verification, against preview deploy `6b011d3ae082b93a67b04d36`, candidate commit `b226609`.
+- Authentication succeeded. Generation returned HTTP **503**, error **`provider_model`**: “The configured model or response format is unavailable for this account. The owner needs to check Groq access.”
+- The Function maps Groq HTTP 400/404/422 to that safe error. Raw provider details were not captured. Schema incompatibility is suspected after the change, but the precise upstream reason is **not confirmed**.
+- No real retry or additional generation test was performed. Quotas were not reset or bypassed.
+- The candidate schema was rolled back to the previously verified format to protect 5/10-question quizzes. One corrective preview deployment was necessary. All five focused quiz regression tests passed again after rollback; no frontend rebuild or full browser rerun was needed.
+- Useful retained changes: positive 20-question validation fixtures, incomplete/oversized response rejection, duplicate/evidence checks, no-retry coverage, and safe errors reporting actual versus requested question counts.
 
-10/20-question generation, broader language/style coverage, final hosted regressions, final screenshots, cleanup review, public-bundle scanning, and CI at the final commit are still pending. Do not interpret fixture tests as proof of successful real provider generation for those cases.
+**Remaining blocker:** reliable real 20-question generation is unresolved. The preview rejects incomplete or unsupported quizzes rather than saving them. Local mock success is not evidence that Groq successfully generated 20 questions. Future work should first establish a provider-compatible count constraint locally; another real request requires a separate verification allowance.
 
-Development preview: https://groq-preview--padhai-ishan.netlify.app
-Initial Function preview deploy: `6b006549c6e1cfdb094049a9`.
-Production baseline: `6af795ace4749b2373c80036`, Netlify Free. No production deployment is authorized.
+## Previously completed checks — 2026-11-20
+
+- 14 Function/security tests passed before the five new quiz tests. Coverage includes private access, HttpOnly cookies/CSRF, revocation, expiry, input limits, missing credentials, simulated wrong provider credentials/429s/network failures, durable concurrent quotas, evidence validation, and duplicate MCQs.
+- 18 frontend unit tests and 12 hosting tests passed.
+- All five real MiniLM browser regression scenarios passed both locally and on the HTTPS preview: PDF/TXT/Markdown imports, semantic retrieval, page citations, persistence, isolation, deletion, mobile viewports, invalid files, model recovery, and cancellation.
+- TypeScript/Vite production build and public-bundle scan passed. Mobile Summary/Quiz/Settings checks passed at widths 320, 390, and 768 pixels.
+- Actual Netlify/Groq calls succeeded for an English short answer, a short summary, key takeaways, five-question generation, and ten-question medium-difficulty generation.
+- Actual UI checks passed for private unlock, consent, note import, five MCQs, local scoring, score persistence, summary generation, source references, and summary persistence. Screenshots contain public study fixtures only.
+- CI passed for `b129756`: [run 44769193708](https://github.com/ishanwork43-bit/padhAI/actions/runs/44769193708). This is baseline evidence, not a claim about later commits.
+
+Broader successful Hinglish/detailed generation, actual UI retakes, and reliable 20-question generation remain unverified. Fault injection and quota-exhaustion checks use mocks to avoid spending live allowance or modifying the real provider key. Source checks reduce fabricated evidence; they do not prove logical entailment or eliminate prompt injection.
+
+## Deployment scope
+
+Preview: https://groq-preview--padhai-ishan.netlify.app
+
+Corrective preview deploy: `6b011d902e88485aca134e2e` (restored provider schema; no further live generation requests).
+
+Production remains `6af795ace4749b2373c80036`, confirmed after the candidate deployment on 2026-11-21. No production deployment, main merge, branch deletion, paid upgrade, or history rewrite was performed. Both earlier architecture branches remain preserved.

@@ -39,16 +39,14 @@ function fixture(count = 20) {
   return { input, output };
 }
 
-test('5/10/20-question provider schemas allow only the requested count or empty evidence refusal', () => {
+test('5/10/20-question requests retain the previously verified provider format after rollback', () => {
   for (const count of [5, 10, 20]) {
     const { input } = fixture(count);
     const schema = providerPayload(input).response_format.json_schema.schema;
-    const [complete, insufficient] = schema.properties.questions.anyOf;
-    assert.equal(complete.minItems, count);
-    assert.equal(complete.maxItems, count);
-    assert.equal(insufficient.maxItems, 0);
-    assert.equal(complete.items.$ref, '#/$defs/question');
-    assert.equal(schema.$defs.question.additionalProperties, false);
+    assert.equal(schema.properties.questions.type, 'array');
+    assert.equal(schema.properties.questions.items.additionalProperties, false);
+    assert.equal(schema.properties.questions.anyOf, undefined);
+    assert.match(providerPayload(input).messages[1].content, new RegExp(`exactly ${count} different`));
   }
 });
 
@@ -60,7 +58,7 @@ test('one mocked Groq response yields 20 distinct MCQs with exact page-aware evi
     assert.equal(url, 'https://api.groq.com/openai/v1/chat/completions');
     const payload = JSON.parse(options.body);
     assert.equal(payload.response_format.json_schema.strict, true);
-    assert.equal(payload.response_format.json_schema.schema.properties.questions.anyOf[0].minItems, 20);
+    assert.equal(payload.response_format.json_schema.schema.properties.questions.type, 'array');
     return new Response(JSON.stringify({ choices: [{ finish_reason: 'stop', message: { content: JSON.stringify(output) } }] }));
   });
   assert.equal(calls, 1);
