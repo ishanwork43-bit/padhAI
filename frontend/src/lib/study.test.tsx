@@ -6,6 +6,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { StudyProvider, useStudy } from './study';
 import { loadWorkspace, request } from './api';
 import { ToastProvider } from '../components/Toast';
+const { ai } = vi.hoisted(() => ({ ai: { status: null, refresh: vi.fn(), reportError: vi.fn() } }));
+vi.mock('./ai-access', () => ({ useAI: () => ai }));
 vi.mock('./api', () => ({
   loadWorkspace: vi.fn(),
   request: vi.fn(),
@@ -96,3 +98,30 @@ it('does not overwrite a newer search when an earlier AI job finishes', async ()
   expect(screen.getByTestId('question')).toHaveTextContent('A newer question');
   expect(screen.getByTestId('answer')).toHaveTextContent('empty');
 });
+
+it.each(['quiz', 'answer', 'summary'])(
+  'shows a failed %s generation once, without duplicating it in AI availability',
+  async (kind) => {
+    const client = mount('/quiz', <Harness />);
+    await waitFor(() => expect(screen.getByTestId('job')).toHaveTextContent('running'));
+    const failed = {
+      ...job,
+      kind,
+      status: 'failed',
+      error: {
+        code: 'invalid_generation',
+        message: 'An evidence ID did not belong to the selected notes. Nothing was saved.',
+      },
+    };
+    await act(async () => {
+      client.setQueryData(['job', 'answer-job'], failed);
+    });
+    expect(await screen.findAllByRole('alert')).toHaveLength(1);
+    expect(screen.getByRole('alert')).toHaveTextContent(failed.error.message);
+    expect(ai.reportError).not.toHaveBeenCalled();
+    await act(async () => {
+      client.setQueryData(['job', 'answer-job'], { ...failed });
+    });
+    expect(screen.getAllByRole('alert')).toHaveLength(1);
+  },
+);

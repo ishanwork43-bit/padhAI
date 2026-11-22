@@ -134,7 +134,6 @@ export function StudyProvider({ children }: { children: ReactNode }) {
     void refresh();
     if (job.kind !== 'index') void ai.refresh();
     if (job.status === 'failed') {
-      if (job.kind !== 'index') ai.reportError(job.error?.message ?? 'Generation failed.');
       toast(job.error?.message ?? 'This operation could not finish.', true);
       return;
     }

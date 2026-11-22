@@ -81,3 +81,60 @@ it('hides draft solutions, scores locally, and rejects invalid or repeated submi
   expect(result.questions[0].explanation).toBe('Evidence explanation');
   expect(() => submitQuiz(quiz, [1, 2])).toThrow('submitted');
 });
+
+it.each([
+  [5, 2],
+  [10, 3],
+])('scores a complete %i-question quiz without changing its citations', (count, correct) => {
+  const quiz: Quiz = {
+    id: 'fixture',
+    count,
+    difficulty: 'easy',
+    created_at: '',
+    attempt_number: 1,
+    submitted: false,
+    score: null,
+    answers: null,
+    can_retake: true,
+    questions: Array.from({ length: count }, (_, i) => ({
+      question: `Fixture question ${i + 1}`,
+      options: ['a', 'b', 'c', 'd'],
+      correct_index: i % 4,
+      explanation: 'The exact original excerpt supports this answer.',
+      citations: [
+        {
+          source_id: 'S1',
+          document_id: 'a'.repeat(64),
+          filename: 'notes.pdf',
+          page_number: 2,
+          start_char: 20,
+          end_char: 62,
+          quote: 'Plants use\nchlorophyll to absorb sunlight.',
+        },
+      ],
+    })),
+  };
+  expect(publicQuiz(quiz).questions.every((q) => q.correct_index === undefined)).toBe(true);
+  const result = submitQuiz(quiz, Array(count).fill(0));
+  expect(result.score).toMatchObject({
+    correct,
+    total: count,
+    unanswered: 0,
+    percentage: (correct / count) * 100,
+  });
+  expect(result.questions[0].citations).toEqual(quiz.questions[0].citations);
+  expect(() =>
+    verifyLocalCitations(result.questions[0].citations!, [
+      {
+        chunk_id: 'fixture',
+        document_id: 'a'.repeat(64),
+        filename: 'notes.pdf',
+        page_number: 2,
+        start_char: 20,
+        end_char: 62,
+        text: 'Plants use\nchlorophyll to absorb sunlight.',
+        similarity: 1,
+      },
+    ]),
+  ).not.toThrow();
+});

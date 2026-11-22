@@ -137,7 +137,7 @@ test('untrusted instructions cannot add fields or forged evidence to accepted ou
 test('MCQs require four unique options, exact correct-answer evidence and distinct questions', () => {
   const input = validateInput(payload({ task: 'quiz', count: 5, difficulty: 'easy' }));
   const stems = ['Which pigment absorbs light in a plant?', 'What substance is used to capture solar energy?', 'Identify the green molecule involved in photosynthesis.', 'Name the pigment mentioned in these plant notes.', 'Which component helps leaves use the sun?'];
-  const quiz = { status: 'supported', questions: stems.map(question => ({ question, options: ['chlorophyll','hemoglobin','insulin','keratin'], correct_index: 0, explanation: 'The source names chlorophyll as the pigment absorbing sunlight.', citations: [{ source_id: 'S1', quote: source.text }] })) };
+  const quiz = { status: 'supported', questions: stems.map(question => ({ question, options: ['chlorophyll','hemoglobin','insulin','keratin'], correct_index: 0, explanation: 'The source names chlorophyll as the pigment absorbing sunlight.', evidence_ids: ['E1'] })) };
   // Rewording one source fact five times does not make five distinct questions.
   assert.throws(() => validateOutput(quiz, input));
   const wrong = structuredClone(quiz); wrong.questions[0].correct_index = 1;

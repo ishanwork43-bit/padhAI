@@ -11,7 +11,7 @@
 
 The embedding model is pinned to a revision and SHA256-checked before use. Each vector has 384 dimensions. PDF citations retain page numbers and character offsets. IndexedDB transactions and revision checks prevent old jobs from overwriting newer document state; deletion invalidates derived results across tabs.
 
-Only reviewed excerpts and the generation request reach Groq. The Function fixes the provider and model, checks structured output against supplied source IDs and exact quotes, and reconstructs citation metadata. Quiz checks also reject repeated questions, duplicate options, and correct answers absent from the evidence. These are structural and textual checks, not a proof of factual correctness or complete prompt-injection protection.
+Only reviewed excerpts and the generation request reach Groq. The Function fixes the provider and model. For quizzes, it numbers exact excerpts before generation and resolves returned evidence IDs to the original text and offsets. Unknown IDs are rejected. Answers and summaries retain source-ID and exact-quote validation. Quiz checks also reject repeated questions, duplicate options, and correct answers absent from the evidence. These are structural and textual checks, not a proof of factual correctness or complete prompt-injection protection.
 
 ## Privacy and security
 

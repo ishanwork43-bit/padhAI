@@ -1,5 +1,15 @@
 # Verification and remaining issues
 
+## Quiz citation fix — 2026-11-22
+
+The reported public-preview failure was reproduced locally: the old quiz contract asked the model to copy a quote, while `verifyCitations()` required an exact substring. PDF item spacing/line breaks, repeated or non-breaking spaces, and straight versus typographic punctuation can produce a semantically similar quote that fails this check. The failing live source/quote pair was not collected, so the specific transformation in that request is unknown.
+
+Quizzes now receive server-numbered evidence excerpts and return only `evidence_ids`. Each ID resolves to the original unmodified text, filename, page, and character offsets; there is no fuzzy matching or replacement of unsupported quotations. Unknown IDs, invalid options, unsupported correct answers, and repeated questions still fail closed. Empty or explicitly insufficient evidence produces an explanation and no saved quiz. Answers and summaries keep their existing citation contract. Twenty-question generation remains disabled.
+
+The duplicated error came from reporting a failed generation to both the toast and the AI-status panel. A failed job now produces one toast; connection errors keep their separate status handling.
+
+Local checks: 34 Function/security tests passed, including complete mocked 5/10-question responses, real PDF.js fixture extraction, exact offsets, long/repeated excerpts, forged IDs, compatibility, and existing quota protections. Fourteen focused frontend tests cover local scoring/citation validation, disabled 20-question controls, and single error notifications. The build and public-bundle credential scan also passed. Exactly one corrected preview was deployed. No real Groq request was made. This verifies the implementation with fixtures, not live model behavior under the new quiz schema.
+
 ## Public AI preview — 2026-11-21
 
 Invitations and unlock controls have been replaced by automatic anonymous sessions. The API now enforces per-network limits alongside the existing shared daily counters. Twenty-question generation remains disabled in the UI and is also rejected by the public API.
@@ -51,7 +61,7 @@ Broader successful Hinglish/detailed generation, actual UI retakes, and reliable
 
 Preview: https://groq-preview--padhai-ishan.netlify.app
 
-Current public preview deploy: `6b012381ce02f27ae00cc288`. The earlier UI deploy `6b011ed1e8fcde8d2d90e666`, commit `8471258`, disabled the 20-question option. The preceding corrective deploy `6b011d902e88485aca134e2e` restored the provider schema; neither update made additional live generation requests.
+Current corrected preview deploy: `6b0295ba4aea97b38159f87f` (2026-11-22, deterministic quiz evidence). The preceding public-access preview was `6b012381ce02f27ae00cc288`. The earlier UI deploy `6b011ed1e8fcde8d2d90e666`, commit `8471258`, disabled the 20-question option. The preceding corrective deploy `6b011d902e88485aca134e2e` restored the provider schema; neither update made additional live generation requests.
 
 Production remains `6af795ace4749b2373c80036`, confirmed after the candidate deployment on 2026-11-21. No production deployment, main merge, branch deletion, paid upgrade, or history rewrite was performed. Both earlier architecture branches remain preserved.
 

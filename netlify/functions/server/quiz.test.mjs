@@ -1,5 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { quizEvidence, resolveEvidence } from './evidence.mjs';
+import { readFile } from 'node:fs/promises';
 import { callGroq, providerPayload, validateInput, validateOutput } from './generation.mjs';
 
 // Explicit provider fixtures: these tests never use credentials or network access.
@@ -34,18 +36,20 @@ function fixture(count = 20) {
   const input = validateInput({ task: 'quiz', request_id: crypto.randomUUID(), consent: true, sources, language: 'English', count, difficulty: 'easy' });
   const output = { status: 'supported', questions: facts.slice(0, count).map(([quote, question, answer], i) => ({
     question, options: [answer, 'Test distractor A', 'Test distractor B', 'Test distractor C'], correct_index: 0,
-    explanation: quote, citations: [{ source_id: `S${Math.floor(i / 5) + 1}`, quote }],
+    explanation: quote, evidence_ids: [quizEvidence(input.sources).find(e => e.source_id === `S${Math.floor(i / 5) + 1}` && e.quote === quote).evidence_id],
   })) };
   return { input, output };
 }
 
-test('5/10/20-question requests retain the previously verified provider format after rollback', () => {
+test('quiz schema uses evidence IDs and retains simple arrays with server-side count checks', () => {
   for (const count of [5, 10, 20]) {
     const { input } = fixture(count);
     const schema = providerPayload(input).response_format.json_schema.schema;
     assert.equal(schema.properties.questions.type, 'array');
     assert.equal(schema.properties.questions.items.additionalProperties, false);
     assert.equal(schema.properties.questions.anyOf, undefined);
+    assert.equal(schema.properties.questions.items.properties.citations, undefined);
+    assert.equal(schema.properties.questions.items.properties.evidence_ids.items.type, 'string');
     assert.match(providerPayload(input).messages[1].content, new RegExp(`exactly ${count} different`));
   }
 });
@@ -84,7 +88,7 @@ test('incomplete and oversized quizzes are rejected with safe counts; refusals r
 test('20-question count cannot bypass duplicate, citation or correct-answer validation', () => {
   for (const mutate of [
     q => { q[19] = structuredClone(q[0]); },
-    q => { q[19].citations[0].quote = 'An invented quote that is not in the notes.'; },
+    q => { q[19].evidence_ids = ['E999']; },
     q => { q[19].correct_index = 1; },
     q => { q[19].options[1] = q[19].options[0]; },
   ]) {
@@ -100,4 +104,125 @@ test('a rejected mocked 20-question response consumes one call without automatic
     return new Response(JSON.stringify({ choices: [{ finish_reason: 'stop', message: { content: JSON.stringify(output) } }] }));
   }), e => e.code === 'invalid_generation');
   assert.equal(calls, 1);
+});
+
+for (const count of [5, 10]) {
+  test(`complete ${count}-question mock resolves IDs into original citations without model-authored quotes`, async () => {
+    const { input, output } = fixture(count);
+    const result = await callGroq(input, { GROQ_API_KEY: 'test-only-unused-key' }, async (_url, request) => {
+      const payload = JSON.parse(request.body), supplied = JSON.parse(payload.messages[1].content).source_data;
+      assert.deepEqual(supplied, quizEvidence(input.sources).map(e => ({ evidence_id: e.evidence_id, text: e.quote })));
+      return new Response(JSON.stringify({ choices: [{ finish_reason: 'stop', message: { content: JSON.stringify(output) } }] }));
+    });
+    assert.equal(result.questions.length, count);
+    for (const q of result.questions) {
+      assert.equal(q.options.length, 4);
+      for (const c of q.citations) {
+        const source = input.sources.find(s => s.source_id === c.source_id);
+        assert.equal(source.text.slice(c.start_char - source.start_char, c.end_char - source.start_char), c.quote);
+        assert.equal(c.filename, source.filename);
+        assert.equal(c.page_number, source.page_number);
+      }
+    }
+    const partial = structuredClone(output); partial.questions.pop();
+    assert.throws(() => validateOutput(partial, input), e => e.code === 'invalid_generation');
+  });
+}
+
+for (const [label, original, rewritten, correct] of [
+  ['PDF line break', 'Plants use\nchlorophyll to absorb sunlight.', 'Plants use chlorophyll to absorb sunlight.', 'chlorophyll'],
+  ['repeated whitespace', 'Plants use  chlorophyll to absorb sunlight.', 'Plants use chlorophyll to absorb sunlight.', 'chlorophyll'],
+  ['non-breaking whitespace', 'Plants use\u00a0chlorophyll to absorb sunlight.', 'Plants use chlorophyll to absorb sunlight.', 'chlorophyll'],
+  ['PDF punctuation spacing', 'The Sun is a star .', 'The Sun is a star.', 'star'],
+  ['typographic punctuation', 'Earth’s rotation causes day and night.', "Earth's rotation causes day and night.", 'rotation'],
+]) {
+  test(`${label}: rewritten quotes reproduce the mismatch, while IDs preserve original bytes and offsets`, () => {
+    assert.equal(original.includes(rewritten), false);
+    const { input, output } = fixture(5);
+    input.sources[0].text = original;
+    input.sources[0].start_char = 137;
+    input.sources[0].end_char = 137 + original.length;
+    // Keep four other, distinct questions on their original second page.
+    const other = fixture(10).output.questions.slice(5, 9);
+    const evidence = quizEvidence(input.sources), first = evidence.find(e => e.source_id === 'S1');
+    const q = { question: 'Which concept is identified in the supplied passage?', options: [correct, 'Wrong choice A', 'Wrong choice B', 'Wrong choice C'], correct_index: 0, explanation: 'The selected evidence directly identifies this concept.', evidence_ids: [first.evidence_id] };
+    for (const item of other) {
+      const fact = facts.find(f => f[1] === item.question);
+      item.evidence_ids = [evidence.find(e => e.quote === fact[0]).evidence_id];
+    }
+    output.questions = [q, ...other];
+    const result = validateOutput(output, input);
+    assert.equal(result.questions[0].citations[0].quote, original);
+    assert.equal(result.questions[0].citations[0].start_char, 137);
+    assert.equal(result.questions[0].citations[0].end_char, 137 + original.length);
+  });
+}
+
+test('fabricated, repeated, empty and model-rewritten evidence references fail closed', () => {
+  for (const mutate of [
+    q => { q.evidence_ids = ['E999']; },
+    q => { q.evidence_ids = []; },
+    q => { q.evidence_ids = [q.evidence_ids[0], q.evidence_ids[0]]; },
+    q => { q.evidence_ids = [q.evidence_ids[0], 'E999']; },
+    q => { q.citations = [{ source_id: 'S1', quote: 'An invented quote.' }]; },
+    q => { q.evidence_ids = [{ evidence_id: 'E1', quote: 'An invented quote.' }]; },
+    q => { q.evidence_ids = ['E2']; }, // A real ID that does not support this correct answer.
+    q => { q.options[0] = '---'; },
+    q => { q.options[0] = 'Merc'; }, // Do not accept a fragment of another word.
+    q => { q.options.pop(); },
+  ]) {
+    const { input, output } = fixture(5); mutate(output.questions[0]);
+    assert.throws(() => validateOutput(output, input), e => e.code === 'invalid_generation');
+  }
+});
+
+test('long and repeated excerpts preserve locations and stay within citation bounds', () => {
+  const source = { ...fixture().input.sources[0], start_char: 91, text: '🪴 ' + 'a '.repeat(250) + 'ends here. Repeated evidence here. Repeated evidence here.' };
+  const evidence = quizEvidence([source]);
+  for (const e of evidence) {
+    assert.ok(e.quote.length >= 10 && e.quote.length <= 350);
+    assert.equal(source.text.slice(e.start_char - 91, e.end_char - 91), e.quote);
+    assert.equal(e.quote.isWellFormed(), true);
+  }
+  const repeated = evidence.filter(e => e.quote === 'Repeated evidence here.');
+  assert.equal(repeated.length, 2);
+  assert.notEqual(repeated[0].start_char, repeated[1].start_char);
+  assert.equal(resolveEvidence([repeated[1].evidence_id], evidence)[0].start_char, repeated[1].start_char);
+});
+
+test('real PDF.js extraction resolves page-aware original text without whitespace repair', async () => {
+  const { getDocument } = await import('../../../frontend/node_modules/pdfjs-dist/legacy/build/pdf.mjs');
+  const task = getDocument({ data: new Uint8Array(await readFile(new URL('../../../frontend/public/samples/dbms_notes.pdf', import.meta.url))), useSystemFonts: true, disableFontFace: true });
+  try {
+    const pdf = await task.promise;
+    for (let n = 1; n <= pdf.numPages; n++) {
+      const page = await pdf.getPage(n), content = await page.getTextContent();
+      const raw = content.items.map(item => 'str' in item ? `${item.str}${item.hasEOL ? '\n' : ' '}` : '').join('').replace(/\r\n?/g, '\n').trim();
+      const source = { ...fixture().input.sources[0], page_number: n, text: raw.slice(0, 800).trimEnd(), start_char: 0 };
+      const evidence = quizEvidence([source]); assert.ok(evidence.length);
+      for (const e of evidence) {
+        const [citation] = resolveEvidence([e.evidence_id], evidence);
+        assert.equal(citation.page_number, n);
+        assert.equal(raw.slice(citation.start_char, citation.end_char), citation.quote);
+      }
+      page.cleanup();
+    }
+  } finally { await task.destroy(); }
+});
+
+test('insufficient evidence returns no quiz; answer and summary citation formats remain compatible', async () => {
+  const { input } = fixture(5);
+  assert.equal(validateOutput({ status: 'insufficient', questions: [] }, input).mode, 'insufficient');
+  const sparse = { ...input, sources: [{ ...input.sources[0], text: 'One. Two. Six.' }] };
+  let calls = 0;
+  const refusal = await callGroq(sparse, {}, async () => { calls++; throw new Error('Must not call provider'); });
+  assert.equal(refusal.mode, 'insufficient'); assert.deepEqual(refusal.questions, []); assert.equal(calls, 0);
+  for (const task of ['answer', 'summary']) {
+    const compatible = { ...input, task, length: 'short', question: 'Which planet is closest to the Sun?' };
+    const payload = providerPayload(compatible), schema = payload.response_format.json_schema.schema;
+    assert.ok(schema.properties.claims.items.properties.citations);
+    assert.equal(JSON.parse(payload.messages[1].content).source_data[0].source_id, 'S1');
+    const result = validateOutput({ status: 'supported', claims: [{ text: 'Mercury is the closest planet to the Sun.', citations: [{ source_id: 'S1', quote: facts[0][0] }] }] }, compatible);
+    assert.equal(result.claims[0].citations[0].quote, facts[0][0]);
+  }
 });

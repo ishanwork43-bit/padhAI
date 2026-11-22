@@ -2,6 +2,8 @@
 
 ## 0.3.0 — Groq preview
 
+Quiz generation now uses deterministic evidence IDs to avoid model-rewritten citation mismatches. Failed generation shows one error notification.
+
 Adds optional Groq answers, summaries, and quizzes with atomic quotas. The initial private preview now uses anonymous, network-bound sessions and a browser proof-of-work check. Keeps document processing and study data local. Cleans inactive deployment files from this branch; preserved architecture branches and history remain intact. Preview verification is documented separately.
 
 ## 0.2.0 — integrated platform (deployment pending)

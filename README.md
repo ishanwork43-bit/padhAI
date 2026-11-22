@@ -30,7 +30,7 @@ flowchart LR
   Groq --> Check[Validate source quotes and return results]
 ```
 
-PDF.js extracts text; Transformers.js runs a quantized MiniLM model to find related passages. This keeps document processing local and avoids a hosted embedding server. Groq receives only reviewed excerpts through a Function, which keeps the API key out of the browser. Exact-quote checks link generated results back to the notes, but cannot prove every inference is correct.
+PDF.js extracts text; Transformers.js runs a quantized MiniLM model to find related passages. This keeps document processing local and avoids a hosted embedding server. Groq receives only reviewed excerpts through a Function, which keeps the API key out of the browser. Quizzes reference server-numbered excerpts; answers and summaries use exact-quote checks. These links preserve the original evidence but cannot prove every inference is correct.
 
 **Stack:** React, TypeScript, Vite, Tailwind CSS, PDF.js, Transformers.js, IndexedDB, Netlify Functions, Netlify Blobs, and Groq (`openai/gpt-oss-120b`). Blobs stores shared security counters, not study documents.
 
