@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.3.0 — Groq preview
+
+Quiz generation now uses deterministic evidence IDs to avoid model-rewritten citation mismatches. Failed generation shows one error notification.
+
+Adds optional Groq answers, summaries, and quizzes with atomic quotas. The initial private preview now uses anonymous, network-bound sessions and a browser proof-of-work check. Keeps document processing and study data local. Cleans inactive deployment files from this branch; preserved architecture branches and history remain intact. Preview verification is documented separately.
+
+## 0.2.0 — integrated platform (deployment pending)
+
+- React/Vite/Tailwind frontend with six connected pages, responsive navigation and light/dark appearance.
+- FastAPI wraps the existing document, Chroma, RAG/citation and quiz pipeline.
+- Temporary isolated workspaces, secure cookies/CSRF, bounded jobs/uploads, durable metadata, expiry and deletion controls.
+- API, React, hosting and real browser workflow tests; Netlify proxy and Render/Docker deployment configurations.
+- The 0.1.0 implementation and public deployments remain available until the replacement passes hosted verification.
+
 ## Frontend connection — 2026-11-14
 
 - Connected both Netlify launch buttons to https://padhaistudy.streamlit.app/.

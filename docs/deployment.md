@@ -1,125 +1,47 @@
-# Streamlit Community Cloud + Netlify
+# Preview deployment and public AI
 
-PadhAI's Python app runs on **Streamlit Community Cloud**. **Netlify** hosts the
-static landing page and links to that app. Netlify cannot host a persistent
-Streamlit server or its local embedding model. This setup keeps the full Python
-implementation; it does not pretend the landing page performs retrieval.
+## Build and hosting
 
-## 1. Deploy the study app
-
-Sign in to [Streamlit Community Cloud](https://share.streamlit.io/) with GitHub,
-choose **Create app**, and use:
-
-| Setting | Value |
-| --- | --- |
-| Repository | `ishanwork43-bit/padhAI` |
-| Branch | `main` |
-| Main file path | `deployment/streamlit/app.py` |
-| Python version (Advanced settings) | `3.12` |
-
-The entry point runs the original root `app.py`. Its adjacent requirements select
-the tested Linux CPU PyTorch wheel and the project dependencies. No CUDA GPU is
-needed. Start without an OpenAI key: upload, extraction, and local-model search
-work without one. The first index build downloads the pinned public embedding
-model, so it takes longer than later builds. Cloud resource limits still apply;
-start with the small bundled sample documents. Sleeping/restarted instances can
-lose session data and need to reload the model.
-
-To enable optional generation later, add a **root-level** `OPENAI_API_KEY` in the
-app's Advanced settings / Secrets, using Streamlit's TOML format. Never commit it
-or put it in Netlify. Provider usage can incur charges. A publicly accessible app
-with a shared key has no per-user spending controls in this MVP.
-
-After deployment, open the actual `https://<chosen-name>.streamlit.app` URL.
-Check Home, My Notes, Ask PadhAI, and Quiz Mode. Upload the sample PDF/TXT, build
-an index, and verify a question returns the correct source/page before sharing
-the URL. A successful landing-page deployment alone does not verify the app.
-
-## 2. Deploy the landing page on Netlify
-
-Import the same GitHub repository into Netlify. The root `netlify.toml` configures
-base directory `web`, build command `npm run build`, and publish directory
-`web/dist` (the `dist` setting is relative to the base directory).
-
-The root `netlify.toml` now sets **`APP_URL`** under `[build.environment]` to
-`https://padhaistudy.streamlit.app/`. Both launch buttons use this public address.
-Update that setting if the app's URL changes. Use its HTTPS origin without
-credentials, query parameters, or a fragment. No secret belongs in this file or
-value: the URL becomes a public link. Builds fail when the URL is invalid.
-When building without any `APP_URL`, the landing page
-clearly shows **Study app launching soon** and contains no app launch link.
-Deploying that pending page does not deploy the Python app.
-
-The page uses local assets and plain HTML/CSS/JavaScript. Only `web/dist` is
-published, including the intentionally public sample notes. Python source,
-private uploaded notes, local files, and `.env` are never copied by the builder.
-The Netlify page has no upload or AI API endpoint. Opening the study app navigates
-directly to Streamlit; no WebSocket proxy or iframe is required.
-
-For a local preview without an app URL:
+Use Node.js 24:
 
 ```bash
-cd web
-npm test
-npm run build
-python3 -m http.server 8080 --directory dist
+npm ci
+npm --prefix frontend ci
+npm --prefix frontend run build:netlify
 ```
 
-Open `http://localhost:8080`. The launch button is unavailable until an `APP_URL`
-is supplied. To preview the actual link, use
-`APP_URL=https://padhaistudy.streamlit.app/ npm run build`.
+Netlify publishes `frontend/dist` and bundles `netlify/functions`. The non-forced SPA fallback handles application routes; `/api/ai` belongs to the Function. This branch has no external FastAPI proxy.
 
-For an authenticated Netlify CLI deploy, run from `web` after choosing the
-intended Netlify account/site:
+For a manually built preview, use Netlify CLI with `--no-build`, `--dir frontend/dist`, `--functions netlify/functions`, and a dedicated preview alias. CLI `--context` requires an actual Netlify build. Keep the tested commit and deploy ID in the release record. The current review URL is https://groq-preview--padhai-ishan.netlify.app.
 
-```bash
-APP_URL=https://padhaistudy.streamlit.app/ npm run build
-netlify deploy --prod --dir dist --no-build
-```
+## Runtime secrets
 
-Alternatively, run `netlify build --context production` from the repository root
-to use the URL in `netlify.toml`. This build was verified locally with
-`netlify build --context production --offline`. The current connection did not
-permit Netlify dashboard environment-variable writes, so the public URL is
-persisted in the repository's build configuration instead. No new credential is
-needed for this integration. Git-based Netlify builds also read this file.
-A manual CLI deployment does not by itself connect future GitHub pushes to Netlify.
+Configure these only for the Netlify Function runtime:
 
-## Data and access
+| Setting                    | Purpose                                                             |
+| -------------------------- | ------------------------------------------------------------------- |
+| `GROQ_API_KEY`             | Provider credential                                                 |
+| `PADHAI_AI_ENABLED=true`   | Explicit generation enable switch                                   |
+| `PADHAI_AI_SESSION_SECRET` | Independent random base64url signing secret, at least 43 characters |
 
-Hosted uploads reach the Streamlit server and remain in session memory; they do
-not stay solely in the user's browser. Embeddings and search run on that server.
-Explicit AI-generation actions send selected excerpts to OpenAI when configured.
-Source-code visibility on GitHub is separate from the websites' visitor access.
-Use the hosting providers' access controls if you need a restricted demo.
+Never put secrets in frontend code, `VITE_` variables, public build artifacts, screenshots, or logs. `.env.example` lists names only. A preview can receive deployment-only overrides without changing production settings. Do not print CLI secret arguments or environment dumps. Missing settings disable generation while local search remains available. `PADHAI_AI_ACCESS_HASH` and old invitations are no longer used; remove obsolete overrides from future deployments.
 
-## Deployment status
+## Anonymous access and quotas
 
-- GitHub: [public source](https://github.com/ishanwork43-bit/padhAI) and
-  [v0.1.0 release](https://github.com/ishanwork43-bit/padhAI/releases/tag/v0.1.0).
-- Netlify: **[padhai-ishan.netlify.app](https://padhai-ishan.netlify.app)**.
-  Deployment `6af795ace4749b2373c80036` connects both launch buttons to Streamlit.
-  On 2026-11-14, all seven published files matched the generated build and both
-  launch buttons were verified in desktop/mobile browsers.
-- Streamlit: **[padhaistudy.streamlit.app](https://padhaistudy.streamlit.app/)**.
-  Verified PDF/TXT uploads, duplicate handling, real-model indexing, DBMS/cloud
-  searches and source/page citations, unrelated/empty questions, and clearing
-  the test session. A fresh launch had an empty notes session.
-- Optional AI: the app reports no configured OpenAI key. Answer and quiz buttons
-  were verified to stay disabled; no paid generation calls were made.
+Visitors need no invitation or account. AI pages automatically check for an anonymous session and, if needed, solve a short proof of work in a browser worker. This sends no study content. Explicit excerpt-sharing consent in Settings is still required before generation.
 
-The static publish folder contains only the landing assets and public samples.
-Environment files, Streamlit secrets, local Netlify state, and build configuration
-are not served by the Netlify site. Only the public app URL was added for this
-connection; no API key or authentication token was put in the frontend or source.
+The Function uses **Netlify's trusted `context.ip`**, not client forwarding headers. IPv4 addresses and IPv6 /64 networks map to keyed daily hashes; raw IP addresses are not stored by application code. Cookies are signed, HttpOnly, Secure, SameSite=Strict, and bound to that network/day. They last up to eight hours. Browser checks are signed, origin-bound, expire after three minutes, require a 16-bit SHA256 proof, and can be consumed only once. A missing trusted address fails closed.
 
-The Netlify deployment was a manual CLI upload. Automatic GitHub-to-Netlify
-builds are not connected; import/link this repository in Netlify to enable them.
-The existing `netlify.toml` and `APP_URL` setting support that workflow.
-GitHub Actions currently tests the Python app and landing-page build.
+Durable limits apply across Function instances and previews:
 
-The v0.1.0 GitHub release offers GitHub's automatically generated source archives.
-The separately built ZIP/checksum could not be attached because the release-upload
-host rejected the connected credential. The checksum for that separate ZIP must
-not be used to validate GitHub's generated archives. Hosting additions are on
-`main`, after the v0.1.0 tag.
+- Shared: **20 requests and 180,000 reserved tokens per UTC day**, with a one-minute cooldown and an in-flight lease.
+- Per visitor network: **5 requests and 45,000 reserved tokens per UTC day**. Clearing cookies or forging browser headers does not reset these counters.
+- Session setup: **12 attempts per network and 120 globally per ten-minute window**, including challenge and session requests. Challenge-replay records are bounded and pruned on use.
+
+Large requests may exhaust a token budget first. Failed provider requests consume reservations; there are no automatic generation retries. Existing daily counters are preserved when upgrading from private access. Do not reset Blobs counters to bypass quotas. Local search, saved results, and quiz retakes remain available when AI quota is exhausted.
+
+Proof of work is a speed bump, not a CAPTCHA or proof of humanity. Bots can solve it, rotate networks, or exhaust the shared allowance or setup limit. People behind a shared network may share quotas; VPN/network changes can require another browser check. Heavy public traffic can exhaust Netlify Free invocation/storage/bandwidth limits even without successful Groq requests. The application caps provider usage; it cannot guarantee availability under attack. No paid upgrades or unrestricted provider proxy are enabled. See [architecture and privacy](audit/architecture.md).
+
+## Production review
+
+Production is unchanged; the current release is a preview for manual review. Before promotion, review the [verification record](verification.md), obtain owner approval, retain the previous deploy, and check the promoted application. Preview and production origins have separate IndexedDB libraries. Do not merge, promote, enable paid services, or delete preserved branches as part of documentation maintenance.

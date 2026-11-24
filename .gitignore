@@ -19,3 +19,16 @@ chroma/
 dist/
 node_modules/
 .netlify/
+
+# Platform build and browser artifacts
+*.tsbuildinfo
+frontend/test-results/
+frontend/playwright-report/
+
+# Reproducible, public browser runtime assets (prepared before build).
+frontend/public/models/
+frontend/public/wasm/
+frontend/public/pdfjs/
+
+# Also exclude shared dependency-directory symlinks.
+node_modules

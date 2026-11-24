@@ -1,0 +1,147 @@
+import { act, render, screen, waitFor } from '@testing-library/react';
+import { beforeEach, expect, it, vi } from 'vitest';
+import userEvent from '@testing-library/user-event';
+import { MemoryRouter } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { StudyProvider, useStudy } from './study';
+import { jsonRequest, loadWorkspace, request } from './api';
+import { ToastProvider } from '../components/Toast';
+const { ai } = vi.hoisted(() => ({ ai: { status: null, refresh: vi.fn(), reportError: vi.fn() } }));
+vi.mock('./ai-access', () => ({ useAI: () => ai }));
+vi.mock('./api', () => ({
+  loadWorkspace: vi.fn(),
+  request: vi.fn(),
+  resetSession: vi.fn(),
+  jsonRequest: vi.fn(),
+  errorMessage: () => 'Service unavailable',
+  APIError: class extends Error {
+    status = 0;
+  },
+}));
+const workspace = {
+  id: 'owner',
+  revision: 1,
+  active_job: { id: 'answer-job', kind: 'answer', status: 'running', phase: 'generating' },
+};
+const job = {
+  id: 'answer-job',
+  kind: 'answer',
+  status: 'running',
+  phase: 'generating',
+  revision: 1,
+  result: null,
+  error: null,
+};
+function Harness() {
+  const study = useStudy();
+  return (
+    <>
+      <span data-testid="question">{study.search?.question ?? 'empty'}</span>
+      <span data-testid="answer">{study.answer?.question ?? 'empty'}</span>
+      <span data-testid="job">{study.job?.status}</span>
+      <button onClick={() => void study.startJob('index')}>Prepare</button>
+      <button
+        onClick={() =>
+          study.setSearch({
+            question: 'A newer question',
+            revision: 1,
+            mode: 'no_evidence',
+            passages: [],
+          })
+        }
+      >
+        New question
+      </button>
+    </>
+  );
+}
+function mount(route: string, children: React.ReactNode) {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  render(
+    <QueryClientProvider client={client}>
+      <MemoryRouter initialEntries={[route]}>
+        <ToastProvider>
+          <StudyProvider>{children}</StudyProvider>
+        </ToastProvider>
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+  return client;
+}
+beforeEach(() => {
+  vi.clearAllMocks();
+  vi.mocked(loadWorkspace).mockResolvedValue(workspace as never);
+  vi.mocked(request).mockResolvedValue(job);
+});
+it('does not create anonymous storage for a landing-page visitor', async () => {
+  mount('/', <p>Public landing</p>);
+  expect(screen.getByText('Public landing')).toBeInTheDocument();
+  await act(async () => {});
+  expect(loadWorkspace).not.toHaveBeenCalled();
+});
+it('does not overwrite a newer search when an earlier AI job finishes', async () => {
+  const client = mount('/ask', <Harness />);
+  await waitFor(() => expect(screen.getByTestId('job')).toHaveTextContent('running'));
+  await userEvent.setup().click(screen.getByText('New question'));
+  await act(async () => {
+    client.setQueryData(['job', 'answer-job'], {
+      ...job,
+      status: 'completed',
+      result: {
+        question: 'An earlier question',
+        mode: 'grounded',
+        message: 'Ready',
+        passages: [],
+        claims: [],
+      },
+    });
+  });
+  expect(screen.getByTestId('question')).toHaveTextContent('A newer question');
+  expect(screen.getByTestId('answer')).toHaveTextContent('empty');
+});
+
+it('tracks automatic indexing after a previously watched manual job finishes', async () => {
+  const idle = { ...workspace, active_job: null };
+  const completed = { ...job, id: 'manual-index', kind: 'index', status: 'completed' };
+  vi.mocked(loadWorkspace).mockResolvedValue(idle as never);
+  vi.mocked(jsonRequest).mockResolvedValue(completed);
+  vi.mocked(request).mockResolvedValue(completed);
+  const client = mount('/settings', <Harness />);
+  await userEvent.setup().click(await screen.findByText('Prepare'));
+  await waitFor(() => expect(screen.getByTestId('job')).toHaveTextContent('completed'));
+  const automatic = { ...job, id: 'automatic-index', kind: 'index' };
+  vi.mocked(request).mockResolvedValue(automatic);
+  vi.mocked(loadWorkspace).mockResolvedValue({ ...idle, active_job: automatic } as never);
+  await act(async () => {
+    client.setQueryData(['workspace'], { ...idle, active_job: automatic });
+  });
+  await waitFor(() => expect(screen.getByTestId('job')).toHaveTextContent('running'));
+  expect(request).toHaveBeenCalledWith('/jobs/automatic-index');
+});
+
+it.each(['quiz', 'answer', 'summary'])(
+  'shows a failed %s generation once, without duplicating it in AI availability',
+  async (kind) => {
+    const client = mount('/quiz', <Harness />);
+    await waitFor(() => expect(screen.getByTestId('job')).toHaveTextContent('running'));
+    const failed = {
+      ...job,
+      kind,
+      status: 'failed',
+      error: {
+        code: 'invalid_generation',
+        message: 'An evidence ID did not belong to the selected notes. Nothing was saved.',
+      },
+    };
+    await act(async () => {
+      client.setQueryData(['job', 'answer-job'], failed);
+    });
+    expect(await screen.findAllByRole('alert')).toHaveLength(1);
+    expect(screen.getByRole('alert')).toHaveTextContent(failed.error.message);
+    expect(ai.reportError).not.toHaveBeenCalled();
+    await act(async () => {
+      client.setQueryData(['job', 'answer-job'], { ...failed });
+    });
+    expect(screen.getAllByRole('alert')).toHaveLength(1);
+  },
+);
