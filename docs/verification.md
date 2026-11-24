@@ -8,6 +8,8 @@ Focused local checks passed: 18 unit tests across indexing, storage, study-job t
 
 No real Groq requests were made. Functions, quota/security code, AI citation validation, and quiz scoring are unchanged. The two preserved architecture branches remain intact. Browser verification ran locally in Chromium; other browser engines were not retested. Completed embedding checkpoints resume; the last unfinished embedding may be recomputed. CI reruns are skipped to avoid duplicating these focused checks.
 
+Exactly one preview was deployed from implementation commit `ed26c86`. Its HTML and application bundle matched the tested local build. Production's published deploy ID remained unchanged.
+
 ## Quiz citation fix — 2026-11-22
 
 The reported public-preview failure was reproduced locally: the old quiz contract asked the model to copy a quote, while `verifyCitations()` required an exact substring. PDF item spacing/line breaks, repeated or non-breaking spaces, and straight versus typographic punctuation can produce a semantically similar quote that fails this check. The failing live source/quote pair was not collected, so the specific transformation in that request is unknown.
@@ -69,9 +71,9 @@ Broader successful Hinglish/detailed generation, actual UI retakes, and reliable
 
 Preview: https://groq-preview--padhai-ishan.netlify.app
 
-Current corrected preview deploy: `6b0295ba4aea97b38159f87f` (2026-11-22, deterministic quiz evidence). The preceding public-access preview was `6b012381ce02f27ae00cc288`. The earlier UI deploy `6b011ed1e8fcde8d2d90e666`, commit `8471258`, disabled the 20-question option. The preceding corrective deploy `6b011d902e88485aca134e2e` restored the provider schema; neither update made additional live generation requests.
+Current preview deploy: `6b051639b013cdbc2a98b4e4` (2026-11-24, automatic indexing and quiz wording). The preceding corrected preview was `6b0295ba4aea97b38159f87f` (2026-11-22, deterministic quiz evidence). The public-access preview was `6b012381ce02f27ae00cc288`. The earlier UI deploy `6b011ed1e8fcde8d2d90e666`, commit `8471258`, disabled the 20-question option. The preceding corrective deploy `6b011d902e88485aca134e2e` restored the provider schema; these updates made no additional live generation requests.
 
-Production remains `6af795ace4749b2373c80036`, confirmed after the candidate deployment on 2026-11-21. No production deployment, main merge, branch deletion, paid upgrade, or history rewrite was performed. Both earlier architecture branches remain preserved.
+Production remains `6af795ace4749b2373c80036`, confirmed after the preview deployment on 2026-11-24. No production deployment, main merge, branch deletion, paid upgrade, or history rewrite was performed. Both earlier architecture branches remain preserved.
 
 ## Reproduce local checks
 
