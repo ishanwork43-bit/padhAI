@@ -54,7 +54,11 @@ export function StudyProvider({ children }: { children: ReactNode }) {
     enabled: !expired && inWorkspace,
     retry: false,
     staleTime: 15000,
-    refetchInterval: 30000,
+    refetchInterval: (query) =>
+      ['not_indexed', 'indexing'].includes(query.state.data?.index?.status ?? '') &&
+      !query.state.data?.index?.error
+        ? 1000
+        : 30000,
   });
   const workspace = workspaceQuery.data
     ? {
@@ -67,7 +71,7 @@ export function StudyProvider({ children }: { children: ReactNode }) {
         },
       }
     : undefined;
-  const jobId = watchedJob ?? workspace?.active_job?.id;
+  const jobId = workspace?.active_job?.id ?? watchedJob;
   const jobQuery = useQuery({
     queryKey: ['job', jobId],
     queryFn: () => request<Job>(`/jobs/${jobId}`),
@@ -79,6 +83,18 @@ export function StudyProvider({ children }: { children: ReactNode }) {
         : 1200,
   });
   const job = jobQuery.data;
+  const previousIndex = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    if (!workspace) return;
+    const key = `${workspace.id}:${workspace.revision}:${workspace.index?.status}`;
+    if (
+      workspace.index?.status === 'ready' &&
+      previousIndex.current &&
+      previousIndex.current !== key
+    )
+      toast('Your notes are ready!');
+    previousIndex.current = key;
+  }, [workspace?.id, workspace?.revision, workspace?.index?.status, toast]);
   const clearTransient = () => {
     setSearch(null);
     setAnswer(null);
@@ -134,7 +150,8 @@ export function StudyProvider({ children }: { children: ReactNode }) {
     void refresh();
     if (job.kind !== 'index') void ai.refresh();
     if (job.status === 'failed') {
-      toast(job.error?.message ?? 'This operation could not finish.', true);
+      if (job.kind !== 'index')
+        toast(job.error?.message ?? 'This operation could not finish.', true);
       return;
     }
     if (job.kind === 'answer' && job.result && 'claims' in job.result) {
@@ -158,7 +175,6 @@ export function StudyProvider({ children }: { children: ReactNode }) {
       client.invalidateQueries({ queryKey: ['summaries'] });
       if (currentPath.current === '/summary') navigate(`/summary?id=${job.result.summary_id}`);
     }
-    if (job.kind === 'index') toast('Your notes are ready to search.');
   }, [job, toast, navigate]);
   useEffect(() => {
     if (jobQuery.error && jobId) {
@@ -174,7 +190,7 @@ export function StudyProvider({ children }: { children: ReactNode }) {
     setStarting(kind);
     if (kind !== 'index') ai.reportError('');
     try {
-      const created = await jsonRequest<Job>(
+      const created = await jsonRequest<Job | null>(
         kind === 'index'
           ? '/index'
           : kind === 'answer'
@@ -185,6 +201,10 @@ export function StudyProvider({ children }: { children: ReactNode }) {
         'POST',
         kind === 'index' ? payload : { ...(payload as object), csrf: ai.status?.csrf },
       );
+      if (!created) {
+        await refresh();
+        return;
+      }
       setWatchedJob(created.id);
       client.setQueryData(['job', created.id], created);
       await refresh();

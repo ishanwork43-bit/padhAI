@@ -1,5 +1,13 @@
 # Verification and remaining issues
 
+## Automatic indexing and quiz wording — 2026-11-24
+
+PDF, TXT, and Markdown imports now start local indexing automatically. Matching vectors are reused, per-passage checkpoints survive refreshes, and one Web Lock prevents duplicate indexing across tabs. Failed or stopped jobs offer a retry; Settings provides a forced rebuild. The Quiz Generator uses “Practice What You've Learned” and the requested plain-language description. Twenty questions remains disabled.
+
+Focused local checks passed: 18 unit tests across indexing, storage, study-job tracking, and Quiz controls; seven real-MiniLM browser workflows covering uploads, semantic retrieval/citations, persistence, deletion, mobile widths, malformed files, download failures/retries, stopping, refreshes, cross-tab locking, and Settings rebuilds; and one public-AI browser workflow with a mocked summary provider. The latter checks that automatic preparation preserves anonymous access and explicit consent. TypeScript/Vite build and the source/public-asset credential-pattern scan passed.
+
+No real Groq requests were made. Functions, quota/security code, AI citation validation, and quiz scoring are unchanged. The two preserved architecture branches remain intact. Browser verification ran locally in Chromium; other browser engines were not retested. Completed embedding checkpoints resume; the last unfinished embedding may be recomputed. CI reruns are skipped to avoid duplicating these focused checks.
+
 ## Quiz citation fix — 2026-11-22
 
 The reported public-preview failure was reproduced locally: the old quiz contract asked the model to copy a quote, while `verifyCitations()` required an exact substring. PDF item spacing/line breaks, repeated or non-breaking spaces, and straight versus typographic punctuation can produce a semantically similar quote that fails this check. The failing live source/quote pair was not collected, so the specific transformation in that request is unknown.

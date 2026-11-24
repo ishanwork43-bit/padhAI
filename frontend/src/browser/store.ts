@@ -25,6 +25,7 @@ export interface LocalData {
   summaries?: StudySummary[];
   documents: StoredNote[];
   index: { revision: number; model_id: string; passages: VectorPassage[] } | null;
+  index_failure?: { revision: number; code: string; message: string };
   activity: { id: number; kind: string; label: string; created_at: string }[];
 }
 interface Schema extends DBSchema {
@@ -43,6 +44,7 @@ export function freshData(): LocalData {
     summaries: [],
     documents: [],
     index: null,
+    index_failure: undefined,
     activity: [],
   };
 }
@@ -112,7 +114,7 @@ export function requireVersion(state: LocalData, id: string, revision: number) {
   if (state.id !== id || state.revision !== revision)
     throw new LocalError(
       'notes_changed',
-      'Your notes changed during processing. Rebuild the index for the current notes.',
+      'Your notes changed during processing. Preparation will continue with the current notes.',
       409,
     );
 }

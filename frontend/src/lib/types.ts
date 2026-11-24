@@ -105,7 +105,12 @@ export interface Workspace {
     characters: number;
     completed_quizzes: number;
   };
-  index: { status: 'empty' | 'not_indexed' | 'indexing' | 'ready'; indexed_chunks: number };
+  index: {
+    status: 'empty' | 'not_indexed' | 'indexing' | 'ready';
+    indexed_chunks: number;
+    error?: string | null;
+    error_code?: string | null;
+  };
   active_job: Pick<Job, 'id' | 'kind' | 'status' | 'phase'> | null;
   documents: Note[];
   quizzes: QuizSummary[];

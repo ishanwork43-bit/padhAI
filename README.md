@@ -12,7 +12,7 @@ Screenshot from the earlier preview; AI access is now public.
 
 ## Features
 
-- PDF text extraction and semantic search in browser workers, with page-aware source previews.
+- Automatic PDF/TXT/Markdown indexing and semantic search in browser workers, with page-aware source previews.
 - Notes and search vectors stored locally in IndexedDB, with document deletion and persistence after refresh.
 - Source-linked AI answers, short summaries, and key takeaways after explicit excerpt-sharing consent.
 - Five- and ten-question quizzes with scoring, explanations, and saved attempts. Twenty questions is disabled as **Coming soon**.
@@ -49,10 +49,13 @@ npm --prefix frontend run dev
 
 Open `http://localhost:5173`. Local search needs no API key. Startup prepares the pinned public model assets; the first browser indexing session downloads about 45 MB. Optional AI needs the [Netlify Function runtime configuration](docs/deployment.md); never place credentials in `VITE_` variables.
 
+Upload notes and wait for “Your notes are ready!” Preparation runs locally in the background and reuses unchanged passages. Interrupted work resumes after refresh; failures offer a retry. Settings includes a manual rebuild for troubleshooting.
+
 ## Limitations
 
 - Notes belong to this browser profile and site address. Clearing browser data can remove them; keep the original files. There is no cloud sync or backup.
 - The embedding model is English-focused. Scanned PDFs needing OCR and encrypted PDFs are unsupported.
+- Local indexing requires a recent browser with IndexedDB, Web Workers, WebAssembly, and Web Locks support, over HTTPS or localhost.
 - AI has per-network and shared daily quotas. A browser proof-of-work check slows basic bots; shared networks may share limits. Distributed abuse can still exhaust the free allowance.
 - Real checks passed for English short answers, short summaries, key takeaways, and 5/10-question quizzes. Broader Hinglish/detailed generation and live UI retakes remain unverified. See the [test results and known issues](docs/verification.md).
 

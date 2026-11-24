@@ -11,6 +11,8 @@
 
 The embedding model is pinned to a revision and SHA256-checked before use. Each vector has 384 dimensions. PDF citations retain page numbers and character offsets. IndexedDB transactions and revision checks prevent old jobs from overwriting newer document state; deletion invalidates derived results across tabs.
 
+Uploads trigger indexing automatically in the worker. A workspace Web Lock permits one indexing job across tabs. Model-compatible vectors are reused only when the source text and citation metadata match. Each completed embedding is checkpointed in IndexedDB; the index becomes searchable only after all current passages are ready. Refreshes resume saved progress, while failures and user cancellation remain paused until an explicit retry (or a library change). Settings can force a full rebuild. Indexing never sends notes to Groq.
+
 Only reviewed excerpts and the generation request reach Groq. The Function fixes the provider and model. For quizzes, it numbers exact excerpts before generation and resolves returned evidence IDs to the original text and offsets. Unknown IDs are rejected. Answers and summaries retain source-ID and exact-quote validation. Quiz checks also reject repeated questions, duplicate options, and correct answers absent from the evidence. These are structural and textual checks, not a proof of factual correctness or complete prompt-injection protection.
 
 ## Privacy and security

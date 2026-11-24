@@ -91,7 +91,7 @@ export function UploadDialog({ open, onClose }: { open: boolean; onClose: () => 
       setBusy(false);
       await invalidateNotes();
       if (added)
-        toast(`${added} ${added === 1 ? 'document' : 'documents'} added. Ready when you are.`);
+        toast(`${added} ${added === 1 ? 'document' : 'documents'} added. Preparing your notes...`);
       else if (duplicates) toast('These documents are already in your notes.');
     }
   }

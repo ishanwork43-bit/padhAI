@@ -1,7 +1,8 @@
-import { LIMITS, LocalError, MODEL_ID, safeError } from './constants';
+import { buildIndex, indexReady } from './indexer';
+import { LIMITS, LocalError, safeError } from './constants';
 import { LocalStore, freshData, requireVersion, activity } from './store';
-import type { LocalData, StoredNote, VectorPassage } from './store';
-import { chunksFor, rankPassages } from './text';
+import type { StoredNote } from './store';
+import { rankPassages } from './text';
 import { parseFile } from './parser';
 import { embedText, loadModel } from './model';
 import { prepareContext, verifyLocalCitations, publicQuiz, submitQuiz } from './ai-context';
@@ -15,13 +16,28 @@ let importing = false;
 let searching = false;
 let startingIndex = false;
 const metadata = ({ pages: _pages, ...note }: StoredNote): Note => note;
-function ready(state: LocalData) {
-  return state.index?.revision === state.revision && state.index.model_id === MODEL_ID;
+const ready = indexReady;
+let indexFailure: { id: string; revision: number; code: string; message: string } | undefined;
+let indexTimer: ReturnType<typeof setTimeout> | undefined;
+function scheduleIndex() {
+  clearTimeout(indexTimer);
+  indexTimer = setTimeout(() => {
+    void indexNotes(false).catch(() => {});
+  }, 150);
 }
 async function workspace(): Promise<Workspace> {
   const state = await store.read();
+  scheduleIndex();
+  const failure =
+    state.index_failure?.revision === state.revision
+      ? state.index_failure
+      : indexFailure?.id === state.id && indexFailure.revision === state.revision
+        ? indexFailure
+        : undefined;
   const busy =
-    active && ['queued', 'running'].includes(active.status) && active.revision === state.revision;
+    active &&
+    ['queued', 'running'].includes(active.status) &&
+    (active.kind === 'index' || active.revision === state.revision);
   return {
     id: state.id,
     name: state.name,
@@ -49,6 +65,8 @@ async function workspace(): Promise<Workspace> {
       completed_quizzes: (state.quizzes ?? []).filter((q) => q.submitted).length,
     },
     index: {
+      error: failure?.message ?? null,
+      error_code: failure?.code ?? null,
       status:
         busy && active?.kind === 'index'
           ? 'indexing'
@@ -99,72 +117,131 @@ async function addDocument(filename: string, bytes: ArrayBuffer) {
         );
       state.documents.push(note);
       state.revision++;
-      state.index = null;
+      state.index_failure = undefined;
       activity(state, 'upload', `Added ${note.filename}`);
       return { status: 'added', document: metadata(note) };
     });
   } finally {
     importing = false;
+    scheduleIndex();
   }
 }
-async function indexNotes() {
-  if (startingIndex || searching || (active && ['queued', 'running'].includes(active.status)))
-    throw new LocalError(
-      'index_busy',
-      'Local processing is already running. Wait for it to finish.',
-      409,
-    );
+async function indexNotes(retry = true, rebuild = false): Promise<Job | null> {
+  if (
+    startingIndex ||
+    importing ||
+    searching ||
+    (active && ['queued', 'running'].includes(active.status))
+  )
+    return active?.kind === 'index' ? active : null;
   startingIndex = true;
   try {
     const state = await store.read();
-    if (!state.documents.length)
-      throw new LocalError('empty_workspace', 'Add notes before building an index.', 409);
-    const job: Job = {
-      id: crypto.randomUUID(),
-      kind: 'index',
-      status: 'queued',
-      phase: 'Preparing your notes…',
-      revision: state.revision,
-      result: null,
-      error: null,
-    };
-    active = job;
-    jobs.set(job.id, job);
-    if (jobs.size > 10) jobs.delete(jobs.keys().next().value!);
-    const version = ++generation;
-    // The response is immediate; progress is read by the existing UI job poller.
-    void (async () => {
-      try {
-        job.status = 'running';
-        await loadModel((message) => {
-          job.phase = message;
+    if (!state.documents.length || (ready(state) && !rebuild)) return null;
+    if (
+      !retry &&
+      (state.index_failure?.revision === state.revision ||
+        (indexFailure?.id === state.id && indexFailure.revision === state.revision))
+    )
+      return null;
+    if (retry) {
+      await store.update((current) => {
+        requireVersion(current, state.id, state.revision);
+        current.index_failure = undefined;
+      });
+      indexFailure = undefined;
+    }
+    if (!navigator.locks) {
+      await store.update((current) => {
+        requireVersion(current, state.id, state.revision);
+        current.index_failure = {
+          revision: state.revision,
+          code: 'browser_support',
+          message:
+            'Use a recent browser with Web Locks support to prepare notes safely across tabs.',
+        };
+      });
+      return null;
+    }
+    return await new Promise<Job | null>((resolve, reject) => {
+      void navigator.locks
+        .request(`padhai-index:${state.id}`, { ifAvailable: true }, async (lock) => {
+          if (!lock) {
+            resolve(null);
+            return;
+          }
+          const current = await store.read();
+          if (
+            current.id !== state.id ||
+            (ready(current) && !rebuild) ||
+            (!retry && current.index_failure?.revision === current.revision)
+          ) {
+            resolve(null);
+            return;
+          }
+          const job: Job = {
+            id: crypto.randomUUID(),
+            kind: 'index',
+            status: 'running',
+            phase: 'Preparing your notes...',
+            revision: current.revision,
+            result: null,
+            error: null,
+          };
+          active = job;
+          jobs.set(job.id, job);
+          if (jobs.size > 10) jobs.delete(jobs.keys().next().value!);
+          const version = ++generation;
+          resolve(job);
+          try {
+            job.result = await buildIndex(
+              store,
+              loadModel,
+              embedText,
+              () => generation !== version,
+              () => {},
+              rebuild,
+            );
+            job.status = 'completed';
+            job.phase = 'Your notes are ready!';
+          } catch (error) {
+            const safe = safeError(error);
+            job.status = 'failed';
+            job.error = safe;
+            job.phase = 'Preparation paused';
+            if (safe.code !== 'notes_changed')
+              indexFailure = {
+                id: current.id,
+                revision: current.revision,
+                code: safe.code,
+                message: safe.message,
+              };
+            if (safe.code !== 'notes_changed')
+              await store
+                .update((latest) => {
+                  if (latest.id === current.id && latest.revision === current.revision)
+                    latest.index_failure = {
+                      revision: latest.revision,
+                      code: safe.code,
+                      message: safe.message,
+                    };
+                })
+                .catch(() => {});
+          } finally {
+            scheduleIndex();
+          }
+        })
+        .catch(async (error) => {
+          const safe = safeError(error);
+          indexFailure = {
+            id: state.id,
+            revision: state.revision,
+            code: safe.code,
+            message: safe.message,
+          };
+          reject(error);
         });
-        const chunks = state.documents.flatMap(chunksFor);
-        const passages: VectorPassage[] = [];
-        for (const chunk of chunks) {
-          if (generation !== version)
-            throw new LocalError('cancelled', 'Indexing stopped. Your notes are still saved.');
-          requireVersion(await store.read(), state.id, state.revision);
-          job.phase = `Indexing passage ${passages.length + 1} of ${chunks.length} on your device…`;
-          passages.push({ ...chunk, vector: await embedText(chunk.text) });
-        }
-        await store.update((current) => {
-          requireVersion(current, state.id, state.revision);
-          if (generation !== version)
-            throw new LocalError('cancelled', 'Indexing stopped. Your notes are still saved.');
-          current.index = { revision: state.revision, model_id: MODEL_ID, passages };
-          activity(current, 'index', `Indexed ${chunks.length} source passages`);
-        });
-        job.status = 'completed';
-        job.phase = 'Ready to search';
-        job.result = { indexed_chunks: chunks.length };
-      } catch (error) {
-        job.status = 'failed';
-        job.error = safeError(error);
-        job.phase = 'Index not completed';
-      }
-    })();
-    return job;
+    });
   } finally {
     startingIndex = false;
   }
@@ -374,7 +451,12 @@ async function dispatch(path: string, method: string, body: Record<string, unkno
         throw new LocalError('not_found', 'This note has already been removed.', 404);
       state.documents =
         route === '/documents' ? [] : state.documents.filter((n) => n.id !== route.split('/')[2]);
-      state.index = null;
+      if (state.index)
+        state.index.passages = state.index.passages.filter((p) =>
+          state.documents.some((n) => n.id === p.document_id),
+        );
+      if (!state.documents.length) state.index = null;
+      state.index_failure = undefined;
       state.revision++;
       state.activity = [];
       state.quizzes = [];
@@ -412,9 +494,17 @@ async function dispatch(path: string, method: string, body: Record<string, unkno
       },
     };
   }
-  if (route === '/index' && method === 'POST') return indexNotes();
+  if (route === '/index' && method === 'POST') return indexNotes(true, body.rebuild === true);
   if (route === '/index' && method === 'DELETE') {
     generation++;
+    if (active?.kind === 'index')
+      await store.update((state) => {
+        state.index_failure = {
+          revision: state.revision,
+          code: 'cancelled',
+          message: 'Preparation paused. Your notes are saved; retry when you are ready.',
+        };
+      });
     return null;
   }
   if (route.startsWith('/jobs/') && method === 'GET') {
@@ -422,7 +512,7 @@ async function dispatch(path: string, method: string, body: Record<string, unkno
     if (!job)
       throw new LocalError(
         'not_found',
-        'Processing was interrupted when the tab closed. Build the index again.',
+        'Processing was interrupted when the tab closed. Your notes remain saved.',
         404,
       );
     return job;
@@ -437,7 +527,11 @@ async function dispatch(path: string, method: string, body: Record<string, unkno
     try {
       const state = await store.read();
       if (!ready(state))
-        throw new LocalError('index_required', 'Build an index for your current notes first.', 409);
+        throw new LocalError(
+          'index_required',
+          'Your notes are still being prepared. Please wait or retry preparation if it failed.',
+          409,
+        );
       const limit = body.limit === undefined ? state.result_limit : Number(body.limit);
       if (!Number.isInteger(limit) || limit < 1 || limit > 10)
         throw new LocalError('result_limit', 'Choose 1–10 search passages.');

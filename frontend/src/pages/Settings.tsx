@@ -1,14 +1,5 @@
 import { useEffect, useState } from 'react';
-import {
-  Check,
-  Database,
-  Laptop,
-  Moon,
-  Save,
-  ShieldCheck,
-  Sun,
-  Trash2,
-} from 'lucide-react';
+import { Check, Database, Laptop, Moon, Save, ShieldCheck, Sun, Trash2 } from 'lucide-react';
 import { useStudy } from '../lib/study';
 import { errorMessage, jsonRequest } from '../lib/api';
 import { bytes } from '../lib/format';
@@ -17,7 +8,7 @@ import { Badge, Button, ErrorNotice, Modal, SectionHeading } from '../components
 import { AIAvailability } from '../components/AIControls';
 import { useToast } from '../components/Toast';
 export function Settings() {
-  const { workspace, refresh, invalidateNotes, reset } = useStudy(),
+  const { workspace, refresh, invalidateNotes, reset, startJob, job } = useStudy(),
     toast = useToast(),
     [theme, setTheme] = useTheme();
   const [name, setName] = useState(workspace.name),
@@ -145,8 +136,8 @@ export function Settings() {
               <div>
                 <strong>Groq explanations, summaries & quizzes</strong>
                 <p>
-                  Anonymous visitor limits protect the shared free allowance. The provider API key is never
-                  entered into this website.
+                  Anonymous visitor limits protect the shared free allowance. The provider API key
+                  is never entered into this website.
                 </p>
               </div>
             </div>
@@ -188,9 +179,9 @@ export function Settings() {
         <div className="surface settings-panel">
           <AIAvailability />
           <p className="small-muted">
-            Up to 5 requests per visitor network and 20 shared requests per UTC day, token budgets, and a one-minute
-            cooldown. Large requests or Groq’s own limits may reduce availability. No automatic
-            retries or unlimited AI.
+            Up to 5 requests per visitor network and 20 shared requests per UTC day, token budgets,
+            and a one-minute cooldown. Large requests or Groq’s own limits may reduce availability.
+            No automatic retries or unlimited AI.
           </p>
         </div>
       </section>
@@ -218,6 +209,26 @@ export function Settings() {
               </button>
             ))}
           </div>
+        </div>
+      </section>
+      <section className="settings-section">
+        <div className="settings-intro">
+          <h2>Search troubleshooting</h2>
+          <p>Uploads prepare automatically. Rebuild only if local search needs repair.</p>
+        </div>
+        <div className="surface settings-panel">
+          <Button
+            variant="secondary"
+            disabled={
+              !workspace.documents.length || (!!job && ['queued', 'running'].includes(job.status))
+            }
+            onClick={() => void startJob('index', { rebuild: true }).catch(() => {})}
+          >
+            Rebuild semantic index
+          </Button>
+          <p className="small-muted">
+            This recomputes the local embeddings. No notes are sent to Groq.
+          </p>
         </div>
       </section>
       <section id="data" className="settings-section">

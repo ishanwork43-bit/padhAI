@@ -36,7 +36,7 @@ export interface LayoutActions {
 }
 export function AppLayout() {
   const toast = useToast();
-  const { workspace, job, invalidateNotes } = useStudy(),
+  const { workspace, job, startJob, invalidateNotes } = useStudy(),
     location = useLocation(),
     navigate = useNavigate();
   const [upload, setUpload] = useState(false),
@@ -170,22 +170,16 @@ export function AppLayout() {
             </Button>
           </div>
         </header>
-        {jobBusy && (
+        {(jobBusy ||
+          (!workspace.index.error &&
+            ['not_indexed', 'indexing'].includes(workspace.index.status))) && (
           <div className="job-banner" role="status">
             <LoaderCircle size={17} className="spin" />
             <span>
-              {BROWSER_MODE
-                ? job.phase
-                : job.kind === 'index'
-                  ? job.phase === 'loading_model'
-                    ? 'Preparing your search model…'
-                    : 'Building your search index…'
-                  : job.kind === 'quiz'
-                    ? 'Creating your practice quiz…'
-                    : 'Checking the evidence for your answer…'}
+              {!jobBusy || job?.kind === 'index' ? 'Preparing your notes...' : job?.phase}
             </span>
             <span className="job-hint">You can keep exploring your workspace.</span>
-            {BROWSER_MODE && (
+            {BROWSER_MODE && jobBusy && (
               <button
                 className="text-action"
                 onClick={() => {
@@ -194,9 +188,21 @@ export function AppLayout() {
                     .catch((error) => toast(errorMessage(error), true));
                 }}
               >
-                {job.kind === 'index' ? 'Stop indexing' : 'Stop generation'}
+                {job?.kind === 'index' ? 'Stop indexing' : 'Stop generation'}
               </button>
             )}
+          </div>
+        )}
+        {workspace.index.error && (
+          <div className="job-banner" role="alert">
+            <span>{workspace.index.error}</span>
+            <button
+              className="text-action"
+              disabled={jobBusy}
+              onClick={() => void startJob('index').catch(() => {})}
+            >
+              Retry preparation
+            </button>
           </div>
         )}
         <main id="main-content" className="workspace-content">
@@ -244,8 +250,8 @@ export function AppLayout() {
             <section>
               <h3>Find the evidence</h3>
               <p>
-                Build your index in Ask PadhAI, then search in your own words. Open source cards to
-                read the original passage.
+                Your notes prepare automatically. Search in your own words once they are ready. Open
+                source cards to read the original passage.
               </p>
             </section>
           </div>

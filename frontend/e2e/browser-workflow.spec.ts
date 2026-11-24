@@ -1,6 +1,12 @@
 import { test, expect } from '@playwright/test';
 import path from 'node:path';
 
+test.beforeEach(async ({ context }) => {
+  await context.route('**/api/ai?*', (route) =>
+    route.fulfill({ json: { enabled: false, authenticated: false, model: 'test-disabled' } }),
+  );
+});
+
 test('real PDF/TXT/Markdown, quantized semantic retrieval, persistence, isolation, and deletion', async ({
   page,
   browser,
@@ -42,7 +48,6 @@ test('real PDF/TXT/Markdown, quantized semantic retrieval, persistence, isolatio
   await page.getByRole('button', { name: 'Add 1 document', exact: true }).click();
   await expect(page.getByText('Added to your notes', { exact: true })).toHaveCount(3);
   await page.getByRole('button', { name: 'Done', exact: true }).click();
-  await page.getByRole('button', { name: 'Make notes searchable' }).click();
   await expect(page.getByRole('link', { name: 'Ask your notes' })).toBeVisible({ timeout: 150000 });
   await page.screenshot({ path: 'test-results/browser-dashboard.png', fullPage: true });
   await page.getByRole('link', { name: 'Ask your notes' }).click();
@@ -124,9 +129,10 @@ test('real PDF/TXT/Markdown, quantized semantic retrieval, persistence, isolatio
   await expect(secondTab.getByRole('button', { name: 'Preview biology.md' })).toHaveCount(0);
   await secondTab.close();
   await page.getByRole('link', { name: 'Ask PadhAI', exact: true }).click();
-  await expect(page.getByRole('button', { name: 'Build search index' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Search notes', exact: true })).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Build search index' })).toHaveCount(0);
   await page.getByRole('link', { name: 'Quiz Mode', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Private AI access required.' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'AI connection unavailable.' })).toBeVisible();
   await expect(page.getByRole('button', { name: /Create my quiz/ })).toBeDisabled();
   await page.getByRole('link', { name: 'Settings', exact: true }).click();
   await page.getByLabel('Workspace name', { exact: true }).fill('My local library');
@@ -141,7 +147,9 @@ test('real PDF/TXT/Markdown, quantized semantic retrieval, persistence, isolatio
   await page.reload();
   await page.getByRole('link', { name: 'My Notes', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Your next idea belongs here.' })).toBeVisible();
-  expect(apiRequests).toEqual([]);
+  expect(apiRequests.every((url) => new URL(url).searchParams.get('action') === 'status')).toBe(
+    true,
+  );
   expect(externalRequests).toEqual([]);
   expect(contentRequests).toEqual([]);
   expect(errors).toEqual([]);
@@ -230,13 +238,13 @@ test('a failed model download can be retried without losing notes', async ({ pag
   await page.goto('/dashboard');
   await page.getByRole('button', { name: 'Try sample notes' }).click();
   await page.getByRole('button', { name: /Cloud computing A text/ }).click();
-  await page.getByRole('button', { name: 'Make notes searchable' }).click();
   await expect(page.getByText(/The local search model could not load/)).toBeVisible({
     timeout: 60000,
   });
-  await expect(page.getByRole('button', { name: 'Make notes searchable' })).toBeEnabled();
+  await expect(page.getByRole('button', { name: 'Retry preparation' })).toBeEnabled();
   await page.unroute('**/onnx/model_quantized.onnx');
-  await page.getByRole('button', { name: 'Make notes searchable' }).click();
+  await page.reload();
+  await page.getByRole('button', { name: 'Retry preparation' }).click();
   await expect(page.getByRole('link', { name: 'Ask your notes' })).toBeVisible({ timeout: 120000 });
   await page.getByRole('link', { name: 'Ask your notes' }).click();
   await page.getByLabel('What are you curious about?').fill('What is IaaS?');
@@ -257,16 +265,84 @@ test('stopping a model download preserves notes and allows a fresh index', async
   await page.goto('/dashboard');
   await page.getByRole('button', { name: 'Try sample notes' }).click();
   await page.getByRole('button', { name: /Cloud computing A text/ }).click();
-  await page.getByRole('button', { name: 'Make notes searchable' }).click();
   await page.getByRole('button', { name: 'Stop indexing' }).click();
   release();
   await page.unroute('**/onnx/model_quantized.onnx');
-  await expect(page.getByRole('button', { name: 'Make notes searchable' })).toBeEnabled();
+  await expect(page.getByRole('button', { name: 'Retry preparation' })).toBeEnabled();
   await page.getByRole('button', { name: 'Preview cloud_computing.txt' }).click();
   await expect(page.getByRole('dialog')).toContainText('IaaS');
   await page.getByRole('button', { name: 'Close dialog' }).click();
-  await page.getByRole('button', { name: 'Make notes searchable' }).click();
+  await page.getByRole('button', { name: 'Retry preparation' }).click();
   await expect(page.getByRole('link', { name: 'Ask your notes' })).toBeVisible({ timeout: 120000 });
   await page.reload();
   await expect(page.getByRole('link', { name: 'Ask your notes' })).toBeVisible();
+});
+
+test('refresh resumes automatic preparation and two tabs share one indexing lock', async ({
+  page,
+  context,
+}) => {
+  let release!: () => void;
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  let downloads = 0;
+  await context.route('**/onnx/model_quantized.onnx', async (route) => {
+    downloads++;
+    await gate;
+    await route.continue().catch(() => {});
+  });
+  await page.goto('/dashboard');
+  await page.getByRole('button', { name: 'Try sample notes' }).click();
+  await page.getByRole('button', { name: /Cloud computing A text/ }).click();
+  await expect.poll(() => downloads).toBe(1);
+  const other = await context.newPage();
+  await other.goto('/dashboard');
+  await expect(other.locator('.job-banner')).toContainText('Preparing your notes...');
+  expect(
+    await page.evaluate(
+      async () =>
+        (await navigator.locks.query()).held?.filter((l) => l.name?.startsWith('padhai-index:'))
+          .length,
+    ),
+  ).toBe(1);
+  expect(downloads).toBe(1);
+  await page.reload();
+  await expect(page.locator('.job-banner')).toContainText('Preparing your notes...');
+  release();
+  await expect(page.getByRole('link', { name: 'Ask your notes' })).toBeVisible({ timeout: 150000 });
+  await expect(other.getByRole('link', { name: 'Ask your notes' })).toBeVisible({
+    timeout: 150000,
+  });
+  const completed = await page.evaluate(async () => {
+    const db = await new Promise<IDBDatabase>((resolve) => {
+      const r = indexedDB.open('padhai-browser-v1');
+      r.onsuccess = () => resolve(r.result);
+    });
+    const state = await new Promise<any>((resolve) => {
+      const r = db.transaction('workspace').objectStore('workspace').get('current');
+      r.onsuccess = () => resolve(r.result);
+    });
+    db.close();
+    return state.activity.filter((a: { kind: string }) => a.kind === 'index').length;
+  });
+  expect(completed).toBe(1);
+  await other.close();
+});
+
+test('Settings can rebuild an already prepared library', async ({ page }) => {
+  await page.goto('/dashboard');
+  await page.getByRole('button', { name: 'Try sample notes' }).click();
+  await page.getByRole('button', { name: /Cloud computing A text/ }).click();
+  await expect(page.getByText('Your notes are ready!', { exact: true })).toBeVisible({
+    timeout: 150000,
+  });
+  await page.getByRole('link', { name: 'Settings', exact: true }).click();
+  await page.getByRole('button', { name: 'Rebuild semantic index', exact: true }).click();
+  await expect(page.locator('.job-banner')).toContainText('Preparing your notes...');
+  await expect(page.locator('.job-banner')).toHaveCount(0, { timeout: 150000 });
+  await page.getByRole('link', { name: 'Ask PadhAI', exact: true }).click();
+  await page.getByLabel('What are you curious about?').fill('What is IaaS?');
+  await page.getByRole('button', { name: 'Search notes', exact: true }).click();
+  await expect(page.locator('.passage-card').first()).toContainText('cloud_computing.txt');
 });

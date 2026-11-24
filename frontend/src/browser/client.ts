@@ -48,7 +48,8 @@ function getWorker() {
       clearTimeout(request.timer);
       if (
         data.error?.code === 'model_unavailable' ||
-        data.result?.error?.code === 'model_unavailable'
+        data.result?.error?.code === 'model_unavailable' ||
+        data.result?.index?.error_code === 'model_unavailable'
       )
         modelFailed = true;
       if (data.error)
@@ -97,8 +98,10 @@ function send<T>(
 }
 export function localRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
   if (path === '/index' && options.method === 'DELETE') {
-    restartWorker();
-    return Promise.resolve(null as T);
+    return send<T>(path, 'DELETE').then((result) => {
+      restartWorker();
+      return result;
+    });
   }
   if (modelFailed && options.method === 'POST' && ['/index', '/search'].includes(path))
     restartWorker();

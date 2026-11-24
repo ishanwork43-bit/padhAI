@@ -24,12 +24,11 @@ import type { SourceTarget } from '../components/SourceSheet';
 import { relativeTime } from '../lib/format';
 
 export function Dashboard() {
-  const { workspace, startJob, job } = useStudy();
+  const { workspace } = useStudy();
   const { openUpload, openSamples } = useOutletContext<LayoutActions>();
   const [preview, setPreview] = useState<SourceTarget | null>(null);
   const hasNotes = workspace.stats.documents > 0,
-    ready = workspace.index.status === 'ready',
-    busy = !!job && ['queued', 'running'].includes(job.status);
+    ready = workspace.index.status === 'ready';
   return (
     <div className="page-enter">
       <SectionHeading
@@ -55,7 +54,7 @@ export function Dashboard() {
               ? 'Bring in your lecture notes, chapter summaries, and revision sheets. We’ll help you find the connections.'
               : ready
                 ? 'Ask a question in your own words. Find the relevant passage, then go deeper with the original source.'
-                : 'Build a search index to connect ideas across your material. Your first index may take a little longer.'}
+                : 'Your notes are prepared automatically on this device. The first model download may take a little longer.'}
           </p>
           <div className="hero-actions">
             {!hasNotes ? (
@@ -69,10 +68,10 @@ export function Dashboard() {
                 <ArrowRight size={17} />
               </ButtonLink>
             ) : (
-              <Button busy={busy} onClick={() => void startJob('index').catch(() => {})}>
-                <Search size={17} />
-                Make notes searchable
-              </Button>
+              <ButtonLink to="/ask">
+                {workspace.index.error ? 'Review preparation' : 'Preparing your notes...'}
+                <ArrowRight size={17} />
+              </ButtonLink>
             )}
             {!hasNotes ? (
               <button className="text-action" onClick={openSamples}>
@@ -129,7 +128,7 @@ export function Dashboard() {
               {ready
                 ? 'Connected and ready to explore.'
                 : workspace.stats.chunks
-                  ? `${workspace.stats.chunks} passages ready to index.`
+                  ? `${workspace.stats.chunks} passages being prepared.`
                   : 'Add notes to build your knowledge base.'}
             </p>
           </div>
@@ -235,7 +234,9 @@ export function Dashboard() {
             },
             {
               title: 'Make the ideas searchable',
-              description: ready ? 'Your search index is ready' : 'Build your index in Ask PadhAI',
+              description: ready
+                ? 'Your search index is ready'
+                : 'Your notes prepare automatically',
               done: ready,
               to: '/ask',
             },

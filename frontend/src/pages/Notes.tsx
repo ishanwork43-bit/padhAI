@@ -45,7 +45,7 @@ export function Notes() {
       setDeleting(null);
       toast(
         BROWSER_MODE
-          ? 'Document deleted. Rebuild the index to search your remaining notes.'
+          ? 'Document deleted. Your remaining notes will be prepared automatically.'
           : 'Document deleted. Your index and quizzes have been cleared.',
       );
     } catch (reason) {
@@ -178,7 +178,7 @@ export function Notes() {
             </span>
             <span>
               {BROWSER_MODE
-                ? 'Adding or deleting notes clears the search index. Rebuild it to search your current library.'
+                ? 'Notes are prepared automatically when your library changes. Unchanged passages are reused.'
                 : 'Adding notes keeps your existing quizzes. Deleting notes clears derived study results.'}
             </span>
           </div>
@@ -199,7 +199,7 @@ export function Notes() {
           </div>
           <p>
             {BROWSER_MODE
-              ? 'Your search index will also be cleared so it cannot retain deleted material. Your other notes stay in the library.'
+              ? 'This note’s search passages and saved AI results will be removed. Your other notes stay in the library and prepare automatically.'
               : 'Your search index and generated quizzes will also be cleared so they cannot retain deleted material. Your other notes stay in the library.'}
           </p>
           {error && <ErrorNotice message={error} />}

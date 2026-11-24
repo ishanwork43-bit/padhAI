@@ -100,21 +100,21 @@ test('anonymous browser proof, explicit consent and a mocked summary work withou
   await expect(page.getByText('Workspace preferences saved.', { exact: true })).toBeVisible();
   await page.getByRole('link', { name: 'My Notes', exact: true }).click();
   await page.getByRole('button', { name: 'Add notes', exact: true }).first().click();
-  await page
-    .getByLabel('Choose notes to upload')
-    .setInputFiles({
-      name: 'biology.txt',
-      mimeType: 'text/plain',
-      buffer: Buffer.from(
-        'Plants use chlorophyll to absorb sunlight. Photosynthesis converts sunlight into chemical energy. Plants produce glucose and oxygen.',
-      ),
-    });
+  await page.getByLabel('Choose notes to upload').setInputFiles({
+    name: 'biology.txt',
+    mimeType: 'text/plain',
+    buffer: Buffer.from(
+      'Plants use chlorophyll to absorb sunlight. Photosynthesis converts sunlight into chemical energy. Plants produce glucose and oxygen.',
+    ),
+  });
   await page.getByRole('button', { name: 'Add 1 document', exact: true }).click();
   await expect(page.getByText('Added to your notes', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Done', exact: true }).click();
   await page.getByRole('link', { name: 'AI Summary', exact: true }).click();
   await page.getByRole('checkbox', { name: /biology.txt/ }).check();
-  await expect(page.getByRole('button', { name: 'Generate summary', exact: true })).toBeEnabled();
+  await expect(page.getByRole('button', { name: 'Generate summary', exact: true })).toBeEnabled({
+    timeout: 150000,
+  });
   await page.getByRole('button', { name: 'Generate summary', exact: true }).click();
   await expect(page.locator('.summary-results .answer-claim')).toContainText(
     'Chlorophyll helps plants absorb sunlight.',

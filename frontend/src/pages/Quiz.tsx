@@ -288,10 +288,10 @@ export function Quiz() {
                 </span>
                 <Badge tone="purple">From your notes</Badge>
               </div>
-              <h2>Make room for an “aha”.</h2>
+              <h2>Practice What You've Learned</h2>
               <p>
-                Generate a practice quiz with evidence-backed explanations. Answers are revealed
-                after submission.
+                Generate quizzes from your notes, test your understanding, and review answers with
+                explanations.
               </p>
               <NoteSelection selected={selectedIds} onChange={setSelected} />
               <LanguageChoice id="quiz-language" value={language} onChange={setLanguage} />
@@ -304,7 +304,9 @@ export function Quiz() {
                 >
                   <option value={5}>5 questions · a quick check-in</option>
                   <option value={10}>10 questions · a deeper dive</option>
-                  <option value={20} disabled>20 questions · Coming soon</option>
+                  <option value={20} disabled>
+                    20 questions · Coming soon
+                  </option>
                 </select>
               </div>
               <fieldset className="difficulty-field">

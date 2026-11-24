@@ -1,4 +1,3 @@
-import { BROWSER_MODE } from '../lib/mode';
 import { useAI } from '../lib/ai-access';
 import {
   AIAvailability,
@@ -24,13 +23,7 @@ import { useStudy } from '../lib/study';
 import { errorMessage, jsonRequest } from '../lib/api';
 import type { Citation, SearchResult } from '../lib/types';
 import type { LayoutActions } from '../components/AppLayout';
-import {
-  Badge,
-  Button,
-  EmptyState,
-  ErrorNotice,
-  SectionHeading,
-} from '../components/ui';
+import { Badge, Button, EmptyState, ErrorNotice, SectionHeading } from '../components/ui';
 import { SourceSheet } from '../components/SourceSheet';
 import type { SourceTarget } from '../components/SourceSheet';
 import { useToast } from '../components/Toast';
@@ -161,23 +154,16 @@ export function Ask() {
                 <FileSearch size={25} />
               </span>
               <div>
-                <h2>Make your notes searchable.</h2>
+                <h2>
+                  {workspace.index.error
+                    ? 'Preparation needs attention.'
+                    : 'Preparing your notes...'}
+                </h2>
                 <p>
-                  Build a semantic index for your {workspace.stats.documents}{' '}
-                  {workspace.stats.documents === 1 ? 'document' : 'documents'}. The first build can
-                  take a little longer while the model loads.{' '}
-                  {BROWSER_MODE &&
-                    'The search model and runtime download once (about 45 MB). Text stays on your device; indexing continues while you use this tab.'}
+                  Notes are prepared automatically on your device. The first model download is about
+                  45 MB. You can keep using the workspace while preparation runs.
                 </p>
               </div>
-              <Button
-                busy={working && job?.kind === 'index'}
-                disabled={working}
-                onClick={() => void startJob('index').catch(() => {})}
-              >
-                Build search index
-                <ArrowRight size={16} />
-              </Button>
             </div>
           )}
           <form

@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { StudyProvider, useStudy } from './study';
-import { loadWorkspace, request } from './api';
+import { jsonRequest, loadWorkspace, request } from './api';
 import { ToastProvider } from '../components/Toast';
 const { ai } = vi.hoisted(() => ({ ai: { status: null, refresh: vi.fn(), reportError: vi.fn() } }));
 vi.mock('./ai-access', () => ({ useAI: () => ai }));
@@ -39,6 +39,7 @@ function Harness() {
       <span data-testid="question">{study.search?.question ?? 'empty'}</span>
       <span data-testid="answer">{study.answer?.question ?? 'empty'}</span>
       <span data-testid="job">{study.job?.status}</span>
+      <button onClick={() => void study.startJob('index')}>Prepare</button>
       <button
         onClick={() =>
           study.setSearch({
@@ -97,6 +98,25 @@ it('does not overwrite a newer search when an earlier AI job finishes', async ()
   });
   expect(screen.getByTestId('question')).toHaveTextContent('A newer question');
   expect(screen.getByTestId('answer')).toHaveTextContent('empty');
+});
+
+it('tracks automatic indexing after a previously watched manual job finishes', async () => {
+  const idle = { ...workspace, active_job: null };
+  const completed = { ...job, id: 'manual-index', kind: 'index', status: 'completed' };
+  vi.mocked(loadWorkspace).mockResolvedValue(idle as never);
+  vi.mocked(jsonRequest).mockResolvedValue(completed);
+  vi.mocked(request).mockResolvedValue(completed);
+  const client = mount('/settings', <Harness />);
+  await userEvent.setup().click(await screen.findByText('Prepare'));
+  await waitFor(() => expect(screen.getByTestId('job')).toHaveTextContent('completed'));
+  const automatic = { ...job, id: 'automatic-index', kind: 'index' };
+  vi.mocked(request).mockResolvedValue(automatic);
+  vi.mocked(loadWorkspace).mockResolvedValue({ ...idle, active_job: automatic } as never);
+  await act(async () => {
+    client.setQueryData(['workspace'], { ...idle, active_job: automatic });
+  });
+  await waitFor(() => expect(screen.getByTestId('job')).toHaveTextContent('running'));
+  expect(request).toHaveBeenCalledWith('/jobs/automatic-index');
 });
 
 it.each(['quiz', 'answer', 'summary'])(
